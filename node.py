@@ -54,9 +54,8 @@ class Block:
             "timestamp": self.timestamp,
             "previous_hash": self.previous_hash,
             "transactions": self.transactions,
-            "nonce": self.nonce
+            "nonce": self.nonce,
         }
-
 
         if use_merkle:
             data["merkle_root"] = self.merkle_root()
@@ -67,32 +66,7 @@ class Block:
             separators=(",", ":")
         ).encode()
 
-        return hashlib.sha256(
-            encoded
-        ).hexdigest()
-        def calculate_hash(self, use_merkle=True):
-
-            data = {
-            "index": self.index,
-            "timestamp": self.timestamp,
-            "previous_hash": self.previous_hash,
-            "transactions": self.transactions,
-            "nonce": self.nonce
-        }
-
-        if use_merkle:
-
-            data["merkle_root"] = self.merkle_root()
-
-        encoded = json.dumps(
-            data,
-            sort_keys=True,
-            separators=(",", ":")
-        ).encode()
-
-        return hashlib.sha256(
-            encoded
-        ).hexdigest()
+        return hashlib.sha256(encoded).hexdigest()
 
     def mine(self, difficulty):
 
