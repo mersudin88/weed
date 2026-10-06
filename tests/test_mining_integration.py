@@ -20,7 +20,11 @@ from transaction import Transaction
 from mempool import Mempool
 from node import WeedNode, Block
 from chain_validator import validate_chain
-from consensus import get_block_reward
+from consensus import (
+    get_block_reward,
+    get_difficulty,
+)
+
 from cli import (
     validate_transaction,
     calculate_transaction_fee,
@@ -131,7 +135,12 @@ def test_mining_and_blockchain_validation():
         transactions=block_transactions
     )
 
-    block.mine(4)
+    block.mine(
+    get_difficulty(
+        block.index,
+        node.chain
+    )
+)
 
     node.chain.append(block)
 

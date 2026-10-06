@@ -1,3 +1,4 @@
+from consensus import get_difficulty
 import os
 import sys
 
@@ -43,7 +44,12 @@ def test_node_b_accepts_valid_block_from_node_a():
         ]
     )
 
-    block.mine(4)
+    block.mine(
+        get_difficulty(
+            block.index,
+            node_a.chain
+        )
+    )
 
     block_data = {
         "index": block.index,
