@@ -586,12 +586,8 @@ def command_mine(node, wallet):
         print("\nP2P block broadcast failed:")
         print(error)
 
-    mined_txids = {
-        transaction_data["hash"]
-        for transaction_data in transactions
-    }
-
-    for txid in mined_txids:
+    for transaction_data in transactions:
+        txid = transaction_data["hash"]
         mempool.remove_transaction(txid)
 
     print(
