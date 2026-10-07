@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+from pathlib import Path
 
 import pytest
 
@@ -24,7 +25,7 @@ def free_port() -> int:
 class TestNodeCommand:
     def test_prefers_the_console_script_next_to_the_interpreter(self):
         command = node_command(network="regtest", datadir=".", rpc_port=1234, rpc_token="tok")
-        assert command[0].endswith("scarlet-node")
+        assert Path(command[0]).stem == "weed-node"
         assert "run" in command
         for flag in ("--network", "--datadir", "--rpc-host", "--rpc-port", "--rpc-token"):
             assert flag in command

@@ -53,30 +53,17 @@ __all__ = [
 #: two large derived indexes are dropped, and old undo records are pruned.
 SCHEMA_VERSION = 5
 
-#: How many blocks of undo records to keep.  Undo exists only so a block can be
-#: disconnected during a reorganisation; a block this far behind the tip can
-#: never be reorged away, and keeping undo since genesis was a sixth of the
-#: database.  2,000 blocks is far deeper than any reorg this chain has seen.
+#: How many blocks of undo records to keep.
 UNDO_KEEP_BLOCKS = 2_000
 
-#: How long :meth:`Storage.size_stats` may reuse its last measurement.  The
-#: measurement reads every stored block, so it is far too heavy to repeat on
-#: each new block or each ``getinfo``; a slightly stale "chain weight" figure
-#: is the right trade.
+#: How long :meth:`Storage.size_stats` may reuse its last measurement.
 SIZE_CACHE_SECONDS = 60.0
 
 #: How many deserialised blocks :meth:`Storage.get_block` keeps in memory.
-#: Blocks are immutable, so this is only a read cache; it is dropped on pruning.
 BLOCK_CACHE_SIZE = 256
 
 #: Maximum serialised bytes the block cache may hold before the oldest entries
-#: are evicted.  This is *not* the memory the cache uses: a deserialised block
-#: is several times its serialised size (measured at roughly 3-4x on a chain
-#: full of small transactions), so the budget is deliberately modest.  The old
-#: 128 MB counted bytes here but held 400 MB or more of Python objects, which
-#: is enough to matter on a small node host.  Re-reading a block from SQLite
-#: costs a millisecond; keeping the whole recent chain resident does not pay
-#: for itself on the machines that run this node.
+#: are evicted.
 BLOCK_CACHE_MAX_BYTES = 16 * 1024 * 1024  # 16 MB serialised, ~55 MB resident
 
 _SCHEMA = """
@@ -162,7 +149,6 @@ class BlockIndexEntry:
     in_chain: bool
     header: BlockHeader
     pruned: bool = False
-    """``True`` when only the header of this block is still stored."""
 
     @property
     def timestamp(self) -> int:
@@ -200,22 +186,13 @@ class PruneResult:
     """What a call to :meth:`Storage.prune_to` did."""
 
     blocks: int
-    """How many block bodies were dropped."""
     transactions: int
-    """How many transactions were removed from the lookup indexes."""
     freed_bytes: int
-    """Bytes of block bodies and undo data that stopped being stored."""
     prune_height: int
-    """Everything at or below this height has been pruned."""
 
 
 def database_files(path: str | Path) -> list[Path]:
-    """Return every file SQLite keeps for the database at ``path``.
-
-    In write-ahead-log mode the real size of a database is the main file plus its
-    log and shared-memory companions, which can be a large fraction of the total
-    just after a burst of blocks.
-    """
+    """Return every file SQLite keeps for the database at ``path``."""
     main = Path(path)
     return [main, Path(f"{main}-wal"), Path(f"{main}-shm")]
 
@@ -232,16 +209,7 @@ def database_size(path: str | Path) -> int:
 
 
 def inspect_database(path: str | Path) -> dict:
-    """Summarise a chain database without opening it for writing.
-
-    Used before a node is started, to tell somebody how much disk the chain they
-    already have takes up.  It never migrates, never creates and never locks the
-    database for writing, so it is safe to call while a node is running.
-
-    Returns:
-        A dictionary that always has ``exists`` and ``disk_bytes``; the remaining
-        keys are ``None`` when the database could not be read.
-    """
+    """Summarise a chain database without opening it for writing."""
     target = Path(path)
     summary: dict = {
         "path": str(target),
@@ -257,12 +225,22 @@ def inspect_database(path: str | Path) -> dict:
     }
     if not summary["exists"]:
         return summary
+
     connection: sqlite3.Connection | None = None
     try:
-        connection = sqlite3.connect(f"{target.resolve().as_uri()}?mode=ro", uri=True, timeout=5.0)
+        connection = sqlite3.connect(
+            f"{target.resolve().as_uri()}?mode=ro",
+            uri=True,
+            timeout=5.0,
+        )
         connection.row_factory = sqlite3.Row
-        columns = {row[1] for row in connection.execute("PRAGMA table_info(blocks)")}
+
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(blocks)")
+        }
         pruned = "SUM(pruned)" if "pruned" in columns else "0"
+
         row = connection.execute(
             "SELECT COUNT(*) AS blocks,"
             " COALESCE(MAX(CASE WHEN in_chain = 1 THEN height END), 0) AS height,"
@@ -271,6 +249,7 @@ def inspect_database(path: str | Path) -> dict:
             f" COALESCE({pruned}, 0) AS pruned_blocks"
             " FROM blocks"
         ).fetchone()
+
         summary.update(
             {
                 "blocks": int(row["blocks"]),
@@ -280,15 +259,21 @@ def inspect_database(path: str | Path) -> dict:
                 "pruned_blocks": int(row["pruned_blocks"]),
             }
         )
-        marker = connection.execute("SELECT value FROM meta WHERE key = 'prune_height'").fetchone()
+
+        marker = connection.execute(
+            "SELECT value FROM meta WHERE key = 'prune_height'"
+        ).fetchone()
+
         if marker is not None:
             summary["prune_height"] = int(bytes(marker["value"]))
+
     except (sqlite3.Error, OSError, ValueError) as exc:
         summary["error"] = str(exc)
     finally:
         if connection is not None:
             with suppress(sqlite3.Error):
                 connection.close()
+
     return summary
 
 
@@ -307,16 +292,25 @@ class Storage:
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
+
         if str(self.path) != ":memory:":
             self.path.parent.mkdir(parents=True, exist_ok=True)
+
         self._lock = threading.RLock()
         self._depth = 0
+
         self._size_cache: dict | None = None
         self._size_measured_at = 0.0
+        self._size_dirty = True
+
         self._block_cache: OrderedDict[bytes, Block] = OrderedDict()
         self._block_cache_bytes = 0
+
         self._connection = sqlite3.connect(
-            str(self.path), check_same_thread=False, isolation_level=None, timeout=30.0
+            str(self.path),
+            check_same_thread=False,
+            isolation_level=None,
+            timeout=30.0,
         )
         self._connection.row_factory = sqlite3.Row
         self._configure()
@@ -329,140 +323,184 @@ class Storage:
         cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.executescript(_SCHEMA)
+
         stored = self.get_meta("schema_version")
+
         if stored is None:
-            self.set_meta("schema_version", str(SCHEMA_VERSION).encode())
+            self.set_meta(
+                "schema_version",
+                str(SCHEMA_VERSION).encode(),
+            )
             return
+
         version = int(stored)
+
         if version > SCHEMA_VERSION:
             raise StorageError(
                 f"database {self.path} uses schema version {version},"
                 f" this build understands {SCHEMA_VERSION}"
             )
+
         if version < SCHEMA_VERSION:
             self._migrate(version)
 
     def _migrate(self, from_version: int) -> None:
-        """Bring an older database up to :data:`SCHEMA_VERSION`.
-
-        The schema 3 rewrite changes the serialisation of blocks, transactions
-        and coins, so databases from before it are not migrated: every table is
-        dropped and the chain is rebuilt from the new genesis.  This is the
-        hard-fork reset.
-
-        Schema 4 only adds precomputed amounts to the ``address_history`` index,
-        which is a derived index that can be recomputed from the stored blocks
-        and undo records, so existing databases are upgraded in place.
-
-        Schema 5 adds ``blocks.tx_count`` and drops the derived
-        ``tx_location_height`` and ``address_history_txid`` indexes, then prunes
-        undo records for blocks that can no longer be disconnected.  All of it
-        is derived bookkeeping, so this is also an in-place upgrade.
-        """
+        """Bring an older database up to :data:`SCHEMA_VERSION`."""
         if from_version < 3:
-            for table in ("blocks", "utxo", "undo", "tx_location", "address_history", "meta"):
+            for table in (
+                "blocks",
+                "utxo",
+                "undo",
+                "tx_location",
+                "address_history",
+                "meta",
+            ):
                 self._execute(f"DROP TABLE IF EXISTS {table}")
+
             self._connection.executescript(_SCHEMA)
+
         elif from_version == 3:
             self._migrate_v3_to_v4()
             self._migrate_v4_to_v5()
+
         elif from_version == 4:
             self._migrate_v4_to_v5()
-        self.set_meta("schema_version", str(SCHEMA_VERSION).encode())
+
+        self.set_meta(
+            "schema_version",
+            str(SCHEMA_VERSION).encode(),
+        )
 
     def _migrate_v4_to_v5(self) -> None:
-        """Add ``blocks.tx_count``, drop two derived indexes and bound undo.
+        """Add ``blocks.tx_count``, drop two derived indexes and bound undo."""
+        columns = {
+            row[1]
+            for row in self._connection.execute("PRAGMA table_info(blocks)")
+        }
 
-        The indexes are dropped because their cost is large and their use is
-        narrow: ``tx_location_height`` only served the transactions-per-second
-        count, which ``blocks.tx_count`` now answers, and
-        ``address_history_txid`` only made a block *disconnect* fast, which a
-        chain that is not forever-reorganising does not need.  Undo for blocks
-        far behind the tip can never be used, so it is deleted here and kept
-        bounded from then on.
-        """
-        columns = {row[1] for row in self._connection.execute("PRAGMA table_info(blocks)")}
         with self.write():
             if "tx_count" not in columns:
                 self._connection.execute(
-                    "ALTER TABLE blocks ADD COLUMN tx_count INTEGER NOT NULL DEFAULT 0"
+                    "ALTER TABLE blocks ADD COLUMN "
+                    "tx_count INTEGER NOT NULL DEFAULT 0"
                 )
-            # Backfill while the height index that makes it cheap still exists.
+
             self._connection.execute(
                 "UPDATE blocks SET tx_count ="
                 " (SELECT COUNT(*) FROM tx_location t WHERE t.height = blocks.height)"
                 " WHERE in_chain = 1"
             )
-        self._connection.execute("DROP INDEX IF EXISTS tx_location_height")
-        self._connection.execute("DROP INDEX IF EXISTS address_history_txid")
+
+        self._connection.execute(
+            "DROP INDEX IF EXISTS tx_location_height"
+        )
+        self._connection.execute(
+            "DROP INDEX IF EXISTS address_history_txid"
+        )
+
         row = self._connection.execute(
-            "SELECT COALESCE(MAX(height), 0) AS tip FROM blocks WHERE in_chain = 1"
+            "SELECT COALESCE(MAX(height), 0) AS tip "
+            "FROM blocks WHERE in_chain = 1"
         ).fetchone()
+
         tip = 0 if row is None else int(row["tip"])
         cutoff = tip - UNDO_KEEP_BLOCKS
+
         if cutoff > 0:
             with self.write():
                 self._connection.execute(
                     "DELETE FROM undo WHERE block_hash IN"
-                    " (SELECT hash FROM blocks WHERE in_chain = 1 AND height < ?)",
+                    " (SELECT hash FROM blocks "
+                    "WHERE in_chain = 1 AND height < ?)",
                     (cutoff,),
                 )
 
     def _migrate_v3_to_v4(self) -> None:
-        """Add precomputed ``received``/``sent``/``coinbase`` to ``address_history``."""
-        columns = {row[1] for row in self._connection.execute("PRAGMA table_info(address_history)")}
-        for column, default in (("received", 0), ("sent", 0), ("coinbase", 0)):
+        """Add precomputed ``received``/``sent``/``coinbase``."""
+        columns = {
+            row[1]
+            for row in self._connection.execute(
+                "PRAGMA table_info(address_history)"
+            )
+        }
+
+        for column, default in (
+            ("received", 0),
+            ("sent", 0),
+            ("coinbase", 0),
+        ):
             if column not in columns:
                 self._connection.execute(
                     "ALTER TABLE address_history ADD COLUMN"
                     f" {column} INTEGER NOT NULL DEFAULT {default}"
                 )
+
         self._backfill_address_history()
 
     def _backfill_address_history(self) -> None:
-        """Recompute ``received``/``sent``/``coinbase`` for every indexed transaction.
-
-        Replays the active chain using each block's undo record to resolve the
-        coins its inputs spend, so pruned blocks (whose transactions are already
-        unindexed) are never needed.  Runs inside a single transaction.
-        """
+        """Recompute address-history amounts."""
         rows = self._query(
-            "SELECT hash FROM blocks WHERE in_chain = 1 AND pruned = 0 ORDER BY height"
+            "SELECT hash FROM blocks "
+            "WHERE in_chain = 1 AND pruned = 0 ORDER BY height"
         )
+
         if not rows:
             return
+
         with self.write():
             for row in rows:
                 block_hash = bytes(row["hash"])
                 block = self.get_block(block_hash)
-                if block is None:  # pragma: no cover - selected a moment ago
+
+                if block is None:
                     continue
+
                 spent_by_outpoint = dict(self._undo_coins(block_hash))
                 created: dict[OutPoint, tuple[bytes, int]] = {}
+
                 for transaction in block.transactions:
                     received: dict[bytes, int] = {}
                     sent: dict[bytes, int] = {}
+
                     for output in transaction.outputs:
-                        received[output.payload] = received.get(output.payload, 0) + output.value
+                        received[output.payload] = (
+                            received.get(output.payload, 0)
+                            + output.value
+                        )
+
                     for txin in transaction.inputs:
                         if txin.prevout.is_null:
                             continue
+
                         coin = spent_by_outpoint.get(txin.prevout)
+
                         if coin is None:
-                            payload, value = created.get(txin.prevout, (None, 0))
-                            if payload is None:  # pragma: no cover - valid chain
+                            payload, value = created.get(
+                                txin.prevout,
+                                (None, 0),
+                            )
+
+                            if payload is None:
                                 continue
                         else:
                             payload, value = coin.payload, coin.value
+
                         sent[payload] = sent.get(payload, 0) + value
+
                     txid = transaction.txid()
+
                     for index, output in enumerate(transaction.outputs):
-                        created[OutPoint(txid, index)] = (output.payload, output.value)
+                        created[
+                            OutPoint(txid, index)
+                        ] = (output.payload, output.value)
+
                     coinbase = 1 if transaction.is_coinbase else 0
+
                     for payload in set(received) | set(sent):
                         self._execute(
-                            "UPDATE address_history SET received = ?, sent = ?, coinbase = ?"
-                            " WHERE pubkey_hash = ? AND txid = ?",
+                            "UPDATE address_history "
+                            "SET received = ?, sent = ?, coinbase = ? "
+                            "WHERE pubkey_hash = ? AND txid = ?",
                             (
                                 received.get(payload, 0),
                                 sent.get(payload, 0),
@@ -472,8 +510,11 @@ class Storage:
                             ),
                         )
 
-    def _undo_coins(self, block_hash: bytes) -> list[tuple[OutPoint, Coin]]:
-        """Return the coins a block consumed, or ``[]`` if it has no undo record."""
+    def _undo_coins(
+        self,
+        block_hash: bytes,
+    ) -> list[tuple[OutPoint, Coin]]:
+        """Return the coins a block consumed."""
         try:
             return self.get_undo(block_hash)
         except StorageError:
@@ -494,36 +535,58 @@ class Storage:
 
     @contextmanager
     def write(self) -> Iterator[None]:
-        """Run a block of updates inside one immediate SQLite transaction.
-
-        Nested uses join the outermost transaction.
-        """
+        """Run a block of updates inside one immediate SQLite transaction."""
         with self._lock:
             outermost = self._depth == 0
+
             if outermost:
                 self._connection.execute("BEGIN IMMEDIATE")
+
             self._depth += 1
+
             try:
                 yield
             except BaseException:
                 self._depth -= 1
+
                 if outermost:
                     self._connection.execute("ROLLBACK")
+
                 raise
+
             else:
                 self._depth -= 1
+
                 if outermost:
                     self._connection.execute("COMMIT")
 
-    def _query(self, sql: str, params: tuple = ()) -> list[sqlite3.Row]:
+    def _query(
+        self,
+        sql: str,
+        params: tuple = (),
+    ) -> list[sqlite3.Row]:
         with self._lock:
-            return self._connection.execute(sql, params).fetchall()
+            return self._connection.execute(
+                sql,
+                params,
+            ).fetchall()
 
-    def _one(self, sql: str, params: tuple = ()) -> sqlite3.Row | None:
+    def _one(
+        self,
+        sql: str,
+        params: tuple = (),
+    ) -> sqlite3.Row | None:
         with self._lock:
-            return self._connection.execute(sql, params).fetchone()
+            return self._connection.execute(
+                sql,
+                params,
+            ).fetchone()
 
-    def _execute(self, sql: str, params: tuple = ()) -> None:
+    def _execute(
+        self,
+        sql: str,
+        params: tuple = (),
+    ) -> None:
         with self._lock:
             self._connection.execute(sql, params)
 
@@ -531,7 +594,10 @@ class Storage:
 
     def get_meta(self, key: str) -> bytes | None:
         """Read a metadata value."""
-        row = self._one("SELECT value FROM meta WHERE key = ?", (key,))
+        row = self._one(
+            "SELECT value FROM meta WHERE key = ?",
+            (key,),
+        )
         return None if row is None else bytes(row["value"])
 
     def set_meta(self, key: str, value: bytes) -> None:
@@ -544,7 +610,7 @@ class Storage:
 
     @property
     def tip_hash(self) -> bytes | None:
-        """Hash of the active chain tip, if the chain has been initialised."""
+        """Hash of the active chain tip."""
         return self.get_meta("tip")
 
     def set_tip(self, block_hash: bytes) -> None:
@@ -556,6 +622,7 @@ class Storage:
     @staticmethod
     def _entry(row: sqlite3.Row) -> BlockIndexEntry:
         raw = bytes(row["raw"])
+
         return BlockIndexEntry(
             hash=bytes(row["hash"]),
             height=int(row["height"]),
@@ -567,10 +634,16 @@ class Storage:
         )
 
     def put_block(
-        self, block: Block, *, height: int, chainwork: int, in_chain: bool = False
+        self,
+        block: Block,
+        *,
+        height: int,
+        chainwork: int,
+        in_chain: bool = False,
     ) -> BlockIndexEntry:
         """Store a validated block and its index entry."""
         block_hash = block.hash()
+
         self._execute(
             "INSERT OR REPLACE INTO blocks"
             " (hash, height, prev_hash, chainwork, in_chain, timestamp, raw, pruned, tx_count)"
@@ -586,7 +659,9 @@ class Storage:
                 len(block.transactions),
             ),
         )
+
         self._forget_sizes()
+
         return BlockIndexEntry(
             hash=block_hash,
             height=height,
@@ -598,50 +673,76 @@ class Storage:
 
     def has_block(self, block_hash: bytes) -> bool:
         """Return ``True`` if the block is already stored."""
-        return self._one("SELECT 1 FROM blocks WHERE hash = ?", (block_hash,)) is not None
+        return (
+            self._one(
+                "SELECT 1 FROM blocks WHERE hash = ?",
+                (block_hash,),
+            )
+            is not None
+        )
 
-    def get_entry(self, block_hash: bytes) -> BlockIndexEntry | None:
+    def get_entry(
+        self,
+        block_hash: bytes,
+    ) -> BlockIndexEntry | None:
         """Return the index entry for ``block_hash``."""
-        row = self._one("SELECT * FROM blocks WHERE hash = ?", (block_hash,))
+        row = self._one(
+            "SELECT * FROM blocks WHERE hash = ?",
+            (block_hash,),
+        )
         return None if row is None else self._entry(row)
 
     def get_block(self, block_hash: bytes) -> Block | None:
-        """Return a stored block, or ``None`` if it is unknown or pruned."""
+        """Return a stored block, or ``None`` if unknown or pruned."""
         with self._lock:
             cached = self._block_cache.get(block_hash)
+
             if cached is not None:
                 self._block_cache.move_to_end(block_hash)
                 return cached
+
             row = self._connection.execute(
-                "SELECT raw, pruned FROM blocks WHERE hash = ?", (block_hash,)
+                "SELECT raw, pruned FROM blocks WHERE hash = ?",
+                (block_hash,),
             ).fetchone()
+
             if row is None or row["pruned"]:
                 return None
+
             raw = bytes(row["raw"])
-        # Deserialising is the expensive part; do it without holding the lock so
-        # serving blocks to a syncing peer does not stall every other reader.
+
         block = Block.deserialize(raw)
+
         with self._lock:
             self._block_cache[block_hash] = block
             self._block_cache.move_to_end(block_hash)
             self._block_cache_bytes += len(raw)
+
             while (
                 len(self._block_cache) > BLOCK_CACHE_SIZE
                 or self._block_cache_bytes > BLOCK_CACHE_MAX_BYTES
             ):
                 _, old = self._block_cache.popitem(last=False)
                 self._block_cache_bytes -= old.size()
+
         return block
 
-    def set_in_chain(self, block_hash: bytes, in_chain: bool) -> None:
-        """Mark a block as being on (or off) the active chain."""
+    def set_in_chain(
+        self,
+        block_hash: bytes,
+        in_chain: bool,
+    ) -> None:
+        """Mark a block as being on or off the active chain."""
         self._execute(
             "UPDATE blocks SET in_chain = ? WHERE hash = ?",
             (1 if in_chain else 0, block_hash),
         )
         self._forget_sizes()
 
-    def get_chain_entry(self, height: int) -> BlockIndexEntry | None:
+    def get_chain_entry(
+        self,
+        height: int,
+    ) -> BlockIndexEntry | None:
         """Return the active-chain block at ``height``."""
         row = self._one(
             "SELECT * FROM blocks WHERE in_chain = 1 AND height = ?",
@@ -649,91 +750,136 @@ class Storage:
         )
         return None if row is None else self._entry(row)
 
-    def chain_samples(self, heights: Iterable[int]) -> dict[int, tuple[int, int, int]]:
-        """Return ``(chainwork, timestamp, bits)`` for active-chain blocks at ``heights``.
-
-        One query for any number of heights, so a chart or stats page can sample
-        the chain without one round trip per sample.
-        """
+    def chain_samples(
+        self,
+        heights: Iterable[int],
+    ) -> dict[int, tuple[int, int, int]]:
+        """Return chainwork, timestamp and bits for selected heights."""
         wanted = set(heights)
+
         if not wanted:
             return {}
+
         placeholders = ",".join("?" for _ in wanted)
+
         rows = self._query(
             f"SELECT height, chainwork, timestamp, raw FROM blocks"
             f" WHERE in_chain = 1 AND height IN ({placeholders})",
             tuple(sorted(wanted)),
         )
+
         return {
             int(row["height"]): (
                 _blob_to_work(bytes(row["chainwork"])),
                 int(row["timestamp"]),
-                BlockHeader.deserialize(bytes(row["raw"])[:80]).bits,
+                BlockHeader.deserialize(
+                    bytes(row["raw"])[:80]
+                ).bits,
             )
             for row in rows
         }
 
-    def children_of(self, block_hash: bytes) -> list[BlockIndexEntry]:
+    def children_of(
+        self,
+        block_hash: bytes,
+    ) -> list[BlockIndexEntry]:
         """Return every stored block whose parent is ``block_hash``."""
-        rows = self._query("SELECT * FROM blocks WHERE prev_hash = ?", (block_hash,))
+        rows = self._query(
+            "SELECT * FROM blocks WHERE prev_hash = ?",
+            (block_hash,),
+        )
         return [self._entry(row) for row in rows]
 
-    def best_entries(self, limit: int = 8) -> list[BlockIndexEntry]:
-        """Return the stored blocks with the most cumulative work, best first."""
+    def best_entries(
+        self,
+        limit: int = 8,
+    ) -> list[BlockIndexEntry]:
+        """Return stored blocks with the most cumulative work."""
         rows = self._query(
-            "SELECT * FROM blocks ORDER BY chainwork DESC, height DESC LIMIT ?", (limit,)
+            "SELECT * FROM blocks "
+            "ORDER BY chainwork DESC, height DESC LIMIT ?",
+            (limit,),
         )
         return [self._entry(row) for row in rows]
 
     def count_blocks_since(self, timestamp: int) -> int:
-        """Number of active-chain blocks with a timestamp at or after ``timestamp``."""
+        """Number of active-chain blocks with a timestamp at or after timestamp."""
         row = self._one(
-            "SELECT COUNT(*) AS n FROM blocks WHERE in_chain = 1 AND timestamp >= ?",
+            "SELECT COUNT(*) AS n FROM blocks "
+            "WHERE in_chain = 1 AND timestamp >= ?",
             (timestamp,),
         )
         return 0 if row is None else int(row["n"])
 
-    def count_transactions(self, *, start_height: int, end_height: int) -> int:
-        """Number of confirmed transactions at heights ``start_height..end_height``.
-
-        Counts the coinbase of every block, so it matches summing
-        ``len(block.transactions)`` over the range.  The count comes from
-        ``blocks.tx_count``, so a pruned block still contributes its transaction
-        count and no index over ``tx_location`` is needed.
-        """
+    def count_transactions(
+        self,
+        *,
+        start_height: int,
+        end_height: int,
+    ) -> int:
+        """Number of confirmed transactions in a height range."""
         if end_height < start_height:
             return 0
+
         row = self._one(
             "SELECT COALESCE(SUM(tx_count), 0) AS n FROM blocks"
             " WHERE in_chain = 1 AND height BETWEEN ? AND ?",
             (start_height, end_height),
         )
+
         return 0 if row is None else int(row["n"])
 
     def block_count(self) -> int:
-        """Total number of stored blocks, including side branches."""
+        """Total number of stored blocks."""
         row = self._one("SELECT COUNT(*) AS n FROM blocks")
         return 0 if row is None else int(row["n"])
 
     # ------------------------------------------------------------------ headers
 
-    def put_header(self, header: BlockHeader, *, height: int, chainwork: int) -> None:
-        """Store a validated block header (headers-first sync)."""
+    def put_header(
+        self,
+        header: BlockHeader,
+        *,
+        height: int,
+        chainwork: int,
+    ) -> None:
+        """Store a validated block header."""
         self._execute(
-            "INSERT OR REPLACE INTO headers (hash, height, prev_hash, chainwork, raw)"
+            "INSERT OR REPLACE INTO headers "
+            "(hash, height, prev_hash, chainwork, raw)"
             " VALUES (?, ?, ?, ?, ?)",
-            (header.hash(), height, header.prev_hash, _work_to_blob(chainwork), header.serialize()),
+            (
+                header.hash(),
+                height,
+                header.prev_hash,
+                _work_to_blob(chainwork),
+                header.serialize(),
+            ),
         )
 
     def has_header(self, block_hash: bytes) -> bool:
         """Return ``True`` if the header is stored."""
-        return self._one("SELECT 1 FROM headers WHERE hash = ?", (block_hash,)) is not None
+        return (
+            self._one(
+                "SELECT 1 FROM headers WHERE hash = ?",
+                (block_hash,),
+            )
+            is not None
+        )
 
-    def header_entry(self, block_hash: bytes) -> HeaderEntry | None:
-        """Return the stored header entry for ``block_hash``."""
-        row = self._one("SELECT * FROM headers WHERE hash = ?", (block_hash,))
+    def header_entry(
+        self,
+        block_hash: bytes,
+    ) -> HeaderEntry | None:
+        """Return the stored header entry."""
+        row = self._one(
+            "SELECT * FROM headers WHERE hash = ?",
+            (block_hash,),
+        )
+
         if row is None:
             return None
+
         return HeaderEntry(
             hash=bytes(row["hash"]),
             height=int(row["height"]),
@@ -744,9 +890,14 @@ class Storage:
 
     def best_header(self) -> HeaderEntry | None:
         """Return the stored header with the most cumulative work."""
-        row = self._one("SELECT * FROM headers ORDER BY chainwork DESC, height DESC LIMIT 1")
+        row = self._one(
+            "SELECT * FROM headers "
+            "ORDER BY chainwork DESC, height DESC LIMIT 1"
+        )
+
         if row is None:
             return None
+
         return HeaderEntry(
             hash=bytes(row["hash"]),
             height=int(row["height"]),
@@ -760,107 +911,152 @@ class Storage:
         row = self._one("SELECT COUNT(*) AS n FROM headers")
         return 0 if row is None else int(row["n"])
 
-    def remove_headers_from(self, block_hash: bytes) -> int:
-        """Drop a header and every header built on top of it; returns how many went."""
+    def remove_headers_from(
+        self,
+        block_hash: bytes,
+    ) -> int:
+        """Drop a header and every header built on top of it."""
         count = 0
         pending = [block_hash]
+
         while pending:
             current = pending.pop()
+
             if not self.has_header(current):
                 continue
-            self._execute("DELETE FROM headers WHERE hash = ?", (current,))
+
+            self._execute(
+                "DELETE FROM headers WHERE hash = ?",
+                (current,),
+            )
             count += 1
-            for row in self._query("SELECT hash FROM headers WHERE prev_hash = ?", (current,)):
+
+            for row in self._query(
+                "SELECT hash FROM headers WHERE prev_hash = ?",
+                (current,),
+            ):
                 pending.append(bytes(row["hash"]))
+
         return count
 
     # ------------------------------------------------------------------- sizes
 
     def _forget_sizes(self) -> None:
-        """Note that the chain changed; the size measurement refreshes on its own.
+        """Mark the cached size measurement as needing refresh."""
+        self._size_dirty = True
 
-        Computing the size reads every stored block, so it is kept for
-        :data:`SIZE_CACHE_SECONDS` rather than recomputed for each new block (or
-        each ``getinfo`` poll) — that is what made a busy node look pegged.
-        Callers that need the current figure immediately (a prune, say) ask for
-        it with ``max_age=0``.
-        """
-        return
-
-    def size_stats(self, *, max_age: float = SIZE_CACHE_SECONDS) -> dict:
+    def size_stats(
+        self,
+        *,
+        max_age: float | None = None,
+    ) -> dict:
         """Measure how much room the chain takes up.
 
-        Summing the length of every stored block is a full table scan, and
-        ``getinfo`` is polled once a few seconds by the desktop applications, so
-        the answer is cached until the chain changes or ``max_age`` passes.
+        When ``max_age`` is omitted, a chain change forces a fresh measurement.
 
-        Returns:
-            ``chain_bytes`` is the serialised size of the active chain — the
-            honest answer to "how big is this blockchain". ``block_bytes`` adds
-            side branches, ``disk_bytes`` adds the indexes, the UTXO set and
-            SQLite's own overhead.
+        When callers explicitly provide ``max_age``, the normal age-based cache
+        behaviour is used.
         """
         with self._lock:
-            fresh = self._size_cache is not None and time.monotonic() - self._size_measured_at < (
-                max_age
+            use_default = max_age is None
+
+            if max_age is None:
+                max_age = SIZE_CACHE_SECONDS
+
+            fresh = (
+                self._size_cache is not None
+                and time.monotonic() - self._size_measured_at < max_age
+                and (not use_default or not self._size_dirty)
             )
+
             if fresh:
                 assert self._size_cache is not None
                 return dict(self._size_cache)
+
             blocks = self._one(
                 "SELECT COUNT(*) AS blocks,"
                 " COALESCE(SUM(LENGTH(raw)), 0) AS block_bytes,"
                 " COALESCE(SUM(CASE WHEN in_chain = 1 THEN LENGTH(raw) ELSE 0 END), 0)"
-                "     AS chain_bytes,"
-                " COALESCE(SUM(CASE WHEN in_chain = 1 THEN 1 ELSE 0 END), 0) AS chain_blocks,"
+                " AS chain_bytes,"
+                " COALESCE(SUM(CASE WHEN in_chain = 1 THEN 1 ELSE 0 END), 0)"
+                " AS chain_blocks,"
                 " COALESCE(SUM(pruned), 0) AS pruned_blocks,"
-                " COALESCE(SUM(CASE WHEN in_chain = 1 AND pruned = 0 THEN LENGTH(raw) ELSE 0 END),"
-                "     0) AS full_bytes,"
-                " COALESCE(SUM(CASE WHEN in_chain = 1 AND pruned = 0 THEN 1 ELSE 0 END), 0)"
-                "     AS full_blocks"
+                " COALESCE(SUM(CASE WHEN in_chain = 1 AND pruned = 0 "
+                "THEN LENGTH(raw) ELSE 0 END), 0) AS full_bytes,"
+                " COALESCE(SUM(CASE WHEN in_chain = 1 AND pruned = 0 "
+                "THEN 1 ELSE 0 END), 0) AS full_blocks"
                 " FROM blocks"
             )
-            undo = self._one("SELECT COALESCE(SUM(LENGTH(data)), 0) AS total FROM undo")
-            chain_blocks = 0 if blocks is None else int(blocks["chain_blocks"])
-            chain_bytes = 0 if blocks is None else int(blocks["chain_bytes"])
-            full_blocks = 0 if blocks is None else int(blocks["full_blocks"])
-            full_bytes = 0 if blocks is None else int(blocks["full_bytes"])
+
+            undo = self._one(
+                "SELECT COALESCE(SUM(LENGTH(data)), 0) AS total "
+                "FROM undo"
+            )
+
+            chain_blocks = (
+                0 if blocks is None else int(blocks["chain_blocks"])
+            )
+            chain_bytes = (
+                0 if blocks is None else int(blocks["chain_bytes"])
+            )
+            full_blocks = (
+                0 if blocks is None else int(blocks["full_blocks"])
+            )
+            full_bytes = (
+                0 if blocks is None else int(blocks["full_bytes"])
+            )
+
             stats = {
-                "blocks": 0 if blocks is None else int(blocks["blocks"]),
+                "blocks": (
+                    0 if blocks is None else int(blocks["blocks"])
+                ),
                 "chain_blocks": chain_blocks,
-                "block_bytes": 0 if blocks is None else int(blocks["block_bytes"]),
+                "block_bytes": (
+                    0 if blocks is None else int(blocks["block_bytes"])
+                ),
                 "chain_bytes": chain_bytes,
-                "undo_bytes": 0 if undo is None else int(undo["total"]),
+                "undo_bytes": (
+                    0 if undo is None else int(undo["total"])
+                ),
                 "disk_bytes": database_size(self.path),
-                "pruned_blocks": 0 if blocks is None else int(blocks["pruned_blocks"]),
+                "pruned_blocks": (
+                    0 if blocks is None else int(blocks["pruned_blocks"])
+                ),
                 "prune_height": self.prune_height,
-                # Averaged over the blocks whose bodies are still here, so a
-                # pruned node does not report a suspiciously tiny block size.
-                "average_block_bytes": (0 if full_blocks == 0 else round(full_bytes / full_blocks)),
+                "average_block_bytes": (
+                    0
+                    if full_blocks == 0
+                    else round(full_bytes / full_blocks)
+                ),
             }
+
             self._size_cache = stats
             self._size_measured_at = time.monotonic()
+            self._size_dirty = False
+
             return dict(stats)
 
     def vacuum(self) -> int:
-        """Rebuild the database so freed pages are handed back to the filesystem.
-
-        SQLite reuses the space a delete frees, but it does not shrink the file
-        on its own, so pruning only shows up in ``du`` after this.  Returns how
-        many bytes the file lost.
-
-        Raises:
-            StorageError: if called inside a write transaction, which SQLite
-                forbids.
-        """
+        """Rebuild the database and return bytes freed."""
         with self._lock:
             if self._depth:
-                raise StorageError("cannot vacuum inside a transaction")
+                raise StorageError(
+                    "cannot vacuum inside a transaction"
+                )
+
             before = database_size(self.path)
+
             self._connection.execute("VACUUM")
-            self._connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            self._connection.execute(
+                "PRAGMA wal_checkpoint(TRUNCATE)"
+            )
+
             self._forget_sizes()
-            return max(0, before - database_size(self.path))
+
+            return max(
+                0,
+                before - database_size(self.path),
+            )
 
     # ----------------------------------------------------------------- pruning
 
@@ -870,62 +1066,81 @@ class Storage:
         stored = self.get_meta("prune_height")
         return 0 if stored is None else int(stored)
 
-    def prunable_blocks(self, height: int) -> list[bytes]:
-        """Hashes of stored blocks at or below ``height`` that still have a body.
-
-        Genesis is never included: it costs almost nothing and every node is
-        expected to be able to show the first block of its own chain.
-        """
+    def prunable_blocks(
+        self,
+        height: int,
+    ) -> list[bytes]:
+        """Hashes of stored blocks at or below height that still have a body."""
         rows = self._query(
-            "SELECT hash FROM blocks WHERE pruned = 0 AND height BETWEEN 1 AND ? ORDER BY height",
+            "SELECT hash FROM blocks "
+            "WHERE pruned = 0 AND height BETWEEN 1 AND ? "
+            "ORDER BY height",
             (height,),
         )
+
         return [bytes(row["hash"]) for row in rows]
 
-    def prune_to(self, height: int) -> PruneResult:
-        """Drop the bodies of every block at or below ``height``.
-
-        The 80-byte header stays, so the block index, the difficulty schedule and
-        the timestamp rules keep working, and the UTXO set is untouched, so
-        balances stay exactly right.  What goes is the ability to show or serve
-        those old blocks and the transactions in them.
-
-        Undo data goes too, which is what makes this irreversible: the node can
-        no longer reorganise past ``height``.  Callers are expected to keep a
-        generous margin (see :data:`scarletcoin.core.chain.MIN_PRUNE_KEEP`).
-
-        Must be called inside :meth:`write`.
-        """
+    def prune_to(
+        self,
+        height: int,
+    ) -> PruneResult:
+        """Drop the bodies of every block at or below ``height``."""
         candidates = self.prunable_blocks(height)
         marker = self.prune_height
         freed = 0
         transactions = 0
+
         for block_hash in candidates:
-            row = self._one("SELECT raw FROM blocks WHERE hash = ?", (block_hash,))
-            if row is None:  # pragma: no cover - selected a moment ago
+            row = self._one(
+                "SELECT raw FROM blocks WHERE hash = ?",
+                (block_hash,),
+            )
+
+            if row is None:
                 continue
+
             raw = bytes(row["raw"])
+
             try:
                 block = Block.deserialize(raw)
-            except Exception:  # pragma: no cover - stored blocks always parse
+            except Exception:
                 continue
+
             transactions += len(block.transactions)
-            self.unindex_transactions([tx.txid() for tx in block.transactions])
-            undo = self._one(
-                "SELECT LENGTH(data) AS size FROM undo WHERE block_hash = ?", (block_hash,)
+
+            self.unindex_transactions(
+                [tx.txid() for tx in block.transactions]
             )
-            freed += len(raw) - 80 + (0 if undo is None else int(undo["size"]))
+
+            undo = self._one(
+                "SELECT LENGTH(data) AS size FROM undo "
+                "WHERE block_hash = ?",
+                (block_hash,),
+            )
+
+            freed += (
+                len(raw)
+                - 80
+                + (0 if undo is None else int(undo["size"]))
+            )
+
             self.delete_undo(block_hash)
+
             self._execute(
                 "UPDATE blocks SET raw = ?, pruned = 1 WHERE hash = ?",
                 (raw[:80], block_hash),
             )
+
         if candidates:
             marker = max(height, marker)
-            self.set_meta("prune_height", str(marker).encode())
+            self.set_meta(
+                "prune_height",
+                str(marker).encode(),
+            )
             self._forget_sizes()
             self._block_cache.clear()
             self._block_cache_bytes = 0
+
         return PruneResult(
             blocks=len(candidates),
             transactions=transactions,
@@ -935,14 +1150,20 @@ class Storage:
 
     # ---------------------------------------------------------------- UTXO set
 
-    def get_coin(self, outpoint: OutPoint) -> Coin | None:
-        """Return the unspent coin at ``outpoint``, if any."""
+    def get_coin(
+        self,
+        outpoint: OutPoint,
+    ) -> Coin | None:
+        """Return the unspent coin at ``outpoint``."""
         row = self._one(
-            "SELECT value, type, payload, height, coinbase FROM utxo WHERE txid = ? AND idx = ?",
+            "SELECT value, type, payload, height, coinbase "
+            "FROM utxo WHERE txid = ? AND idx = ?",
             (outpoint.txid, outpoint.index),
         )
+
         if row is None:
             return None
+
         return Coin(
             value=int(row["value"]),
             output_type=int(row["type"]),
@@ -951,10 +1172,15 @@ class Storage:
             is_coinbase=bool(row["coinbase"]),
         )
 
-    def add_coin(self, outpoint: OutPoint, coin: Coin) -> None:
+    def add_coin(
+        self,
+        outpoint: OutPoint,
+        coin: Coin,
+    ) -> None:
         """Insert an unspent output."""
         self._execute(
-            "INSERT OR REPLACE INTO utxo (txid, idx, value, type, payload, height, coinbase)"
+            "INSERT OR REPLACE INTO utxo "
+            "(txid, idx, value, type, payload, height, coinbase)"
             " VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 outpoint.txid,
@@ -967,38 +1193,47 @@ class Storage:
             ),
         )
 
-    def remove_coin(self, outpoint: OutPoint) -> None:
+    def remove_coin(
+        self,
+        outpoint: OutPoint,
+    ) -> None:
         """Delete an unspent output."""
         self._execute(
-            "DELETE FROM utxo WHERE txid = ? AND idx = ?", (outpoint.txid, outpoint.index)
+            "DELETE FROM utxo WHERE txid = ? AND idx = ?",
+            (outpoint.txid, outpoint.index),
         )
 
     def coins_of(
-        self, payload: bytes, *, limit: int | None = None, offset: int = 0
+        self,
+        payload: bytes,
+        *,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[tuple[OutPoint, Coin]]:
-        """Return unspent outputs paying ``payload`` (pubkey or script hash).
-
-        Args:
-            payload: The 20-byte public-key or script hash.
-            limit: Return at most this many outputs, oldest first.  ``None``
-                returns every one; a limit lets a caller with a huge coin set
-                ask for a working pool without dragging the whole set over the
-                wire.
-            offset: Skip this many outputs before the limit; ignored when
-                ``limit`` is ``None``.
-        """
+        """Return unspent outputs paying ``payload``."""
         sql = (
             "SELECT txid, idx, value, type, payload, height, coinbase"
             " FROM utxo WHERE payload = ? ORDER BY height, txid, idx"
         )
+
         params: tuple = (payload,)
+
         if limit is not None:
             sql += " LIMIT ? OFFSET ?"
-            params = (payload, max(0, int(limit)), max(0, int(offset)))
+            params = (
+                payload,
+                max(0, int(limit)),
+                max(0, int(offset)),
+            )
+
         rows = self._query(sql, params)
+
         return [
             (
-                OutPoint(bytes(row["txid"]), int(row["idx"])),
+                OutPoint(
+                    bytes(row["txid"]),
+                    int(row["idx"]),
+                ),
                 Coin(
                     value=int(row["value"]),
                     output_type=int(row["type"]),
@@ -1011,72 +1246,112 @@ class Storage:
         ]
 
     def utxo_stats(self) -> tuple[int, int]:
-        """Return ``(number_of_outputs, total_value)`` for the whole UTXO set."""
-        row = self._one("SELECT COUNT(*) AS n, COALESCE(SUM(value), 0) AS total FROM utxo")
+        """Return number of outputs and total value."""
+        row = self._one(
+            "SELECT COUNT(*) AS n, "
+            "COALESCE(SUM(value), 0) AS total FROM utxo"
+        )
+
         if row is None:
             return 0, 0
+
         return int(row["n"]), int(row["total"])
 
-    def richest_addresses(self, limit: int = 10) -> list[tuple[bytes, int]]:
-        """Return the ``limit`` public-key hashes holding the most value."""
+    def richest_addresses(
+        self,
+        limit: int = 10,
+    ) -> list[tuple[bytes, int]]:
+        """Return addresses holding the most value."""
         rows = self._query(
             "SELECT payload, SUM(value) AS total FROM utxo"
             " GROUP BY payload ORDER BY total DESC LIMIT ?",
             (limit,),
         )
-        return [(bytes(row["payload"]), int(row["total"])) for row in rows]
+
+        return [
+            (
+                bytes(row["payload"]),
+                int(row["total"]),
+            )
+            for row in rows
+        ]
 
     # --------------------------------------------------------------- undo data
 
-    def put_undo(self, block_hash: bytes, spent: list[tuple[OutPoint, Coin]]) -> None:
-        """Store the coins consumed by a block so it can be rolled back."""
+    def put_undo(
+        self,
+        block_hash: bytes,
+        spent: list[tuple[OutPoint, Coin]],
+    ) -> None:
+        """Store the coins consumed by a block."""
         writer = Writer()
         writer.varint(len(spent))
+
         for outpoint, coin in spent:
-            writer.hash32(outpoint.txid).uint32(outpoint.index).raw(coin.serialize())
+            writer.hash32(outpoint.txid).uint32(
+                outpoint.index
+            ).raw(coin.serialize())
+
         self._execute(
-            "INSERT OR REPLACE INTO undo (block_hash, data) VALUES (?, ?)",
+            "INSERT OR REPLACE INTO undo (block_hash, data) "
+            "VALUES (?, ?)",
             (block_hash, writer.getvalue()),
         )
 
-    def get_undo(self, block_hash: bytes) -> list[tuple[OutPoint, Coin]]:
-        """Return the coins consumed by a block.
+    def get_undo(
+        self,
+        block_hash: bytes,
+    ) -> list[tuple[OutPoint, Coin]]:
+        """Return the coins consumed by a block."""
+        row = self._one(
+            "SELECT data FROM undo WHERE block_hash = ?",
+            (block_hash,),
+        )
 
-        Raises:
-            StorageError: if the undo record is missing, which makes the block
-                impossible to disconnect.
-        """
-        row = self._one("SELECT data FROM undo WHERE block_hash = ?", (block_hash,))
         if row is None:
-            raise StorageError(f"missing undo data for block {block_hash[::-1].hex()}")
+            raise StorageError(
+                f"missing undo data for block {block_hash[::-1].hex()}"
+            )
+
         reader = Reader(bytes(row["data"]))
         count = reader.varint()
         spent: list[tuple[OutPoint, Coin]] = []
+
         for _ in range(count):
-            outpoint = OutPoint(reader.hash32(), reader.uint32())
-            spent.append((outpoint, Coin.read(reader)))
+            outpoint = OutPoint(
+                reader.hash32(),
+                reader.uint32(),
+            )
+            spent.append(
+                (outpoint, Coin.read(reader))
+            )
+
         reader.expect_end()
+
         return spent
 
-    def delete_undo(self, block_hash: bytes) -> None:
+    def delete_undo(
+        self,
+        block_hash: bytes,
+    ) -> None:
         """Drop a block's undo record."""
-        self._execute("DELETE FROM undo WHERE block_hash = ?", (block_hash,))
+        self._execute(
+            "DELETE FROM undo WHERE block_hash = ?",
+            (block_hash,),
+        )
 
-    def prune_undo_at_height(self, height: int) -> None:
-        """Drop the undo record for the active-chain block at ``height``.
-
-        Called once per connected block with a height ``UNDO_KEEP_BLOCKS``
-        behind the tip, so undo stays bounded instead of growing with the
-        chain.  A block whose undo is gone can no longer be disconnected,
-        which is the intended trade: it is far below any reorg this chain has
-        ever seen.  Does nothing when there is no block at that height, which
-        is the case for the first ``UNDO_KEEP_BLOCKS`` blocks.
-        """
+    def prune_undo_at_height(
+        self,
+        height: int,
+    ) -> None:
+        """Drop the undo record for the active-chain block at ``height``."""
         if height < 0:
             return
+
         self._execute(
             "DELETE FROM undo WHERE block_hash ="
-            " (SELECT hash FROM blocks WHERE in_chain = 1 AND height = ?)",
+            " (SELECT hash FROM blocks "
+            "WHERE in_chain = 1 AND height = ?)",
             (height,),
         )
 
@@ -1091,71 +1366,113 @@ class Storage:
         height: int,
         pubkey_deltas: dict[bytes, tuple[int, int]],
     ) -> None:
-        """Record where a confirmed transaction lives and which addresses it touches.
-
-        ``pubkey_deltas`` maps every touched address hash to its ``(received,
-        sent)`` amounts in this transaction, so history queries never have to
-        load the block again.
-        """
+        """Record a confirmed transaction and touched addresses."""
         txid = transaction.txid()
+
         self._execute(
-            "INSERT OR REPLACE INTO tx_location (txid, block_hash, position, height)"
+            "INSERT OR REPLACE INTO tx_location "
+            "(txid, block_hash, position, height)"
             " VALUES (?, ?, ?, ?)",
-            (txid, block_hash, position, height),
+            (
+                txid,
+                block_hash,
+                position,
+                height,
+            ),
         )
+
         coinbase = 1 if transaction.is_coinbase else 0
+
         for pubkey_hash, (received, sent) in pubkey_deltas.items():
             self._execute(
-                "INSERT OR REPLACE INTO address_history"
-                " (pubkey_hash, txid, height, received, sent, coinbase)"
+                "INSERT OR REPLACE INTO address_history "
+                "(pubkey_hash, txid, height, received, sent, coinbase)"
                 " VALUES (?, ?, ?, ?, ?, ?)",
-                (pubkey_hash, txid, height, received, sent, coinbase),
+                (
+                    pubkey_hash,
+                    txid,
+                    height,
+                    received,
+                    sent,
+                    coinbase,
+                ),
             )
 
-    def unindex_transaction(self, txid: bytes) -> None:
+    def unindex_transaction(
+        self,
+        txid: bytes,
+    ) -> None:
         """Forget a transaction that is no longer on the active chain."""
-        self._execute("DELETE FROM tx_location WHERE txid = ?", (txid,))
-        self._execute("DELETE FROM address_history WHERE txid = ?", (txid,))
+        self._execute(
+            "DELETE FROM tx_location WHERE txid = ?",
+            (txid,),
+        )
+        self._execute(
+            "DELETE FROM address_history WHERE txid = ?",
+            (txid,),
+        )
 
-    def unindex_transactions(self, txids: Sequence[bytes]) -> None:
-        """Forget several transactions in a single pass per table.
-
-        There is no index on ``address_history.txid`` (it cost more disk than
-        the lookups it saved), so deleting one transaction at a time would scan
-        the whole address history once per transaction.  Batching turns a block
-        disconnect or a prune into one scan per block instead of one per
-        transaction.  The list is chunked because SQLite bounds how many
-        parameters one statement may bind.
-        """
+    def unindex_transactions(
+        self,
+        txids: Sequence[bytes],
+    ) -> None:
+        """Forget several transactions in batches."""
         if not txids:
             return
+
         for start in range(0, len(txids), 500):
             chunk = tuple(txids[start : start + 500])
             placeholders = ",".join("?" for _ in chunk)
-            self._execute(f"DELETE FROM tx_location WHERE txid IN ({placeholders})", chunk)
-            self._execute(f"DELETE FROM address_history WHERE txid IN ({placeholders})", chunk)
 
-    def get_tx_location(self, txid: bytes) -> TxLocation | None:
+            self._execute(
+                f"DELETE FROM tx_location "
+                f"WHERE txid IN ({placeholders})",
+                chunk,
+            )
+
+            self._execute(
+                f"DELETE FROM address_history "
+                f"WHERE txid IN ({placeholders})",
+                chunk,
+            )
+
+    def get_tx_location(
+        self,
+        txid: bytes,
+    ) -> TxLocation | None:
         """Return where a confirmed transaction lives."""
         row = self._one(
-            "SELECT block_hash, position, height FROM tx_location WHERE txid = ?", (txid,)
+            "SELECT block_hash, position, height "
+            "FROM tx_location WHERE txid = ?",
+            (txid,),
         )
+
         if row is None:
             return None
-        return TxLocation(bytes(row["block_hash"]), int(row["position"]), int(row["height"]))
+
+        return TxLocation(
+            bytes(row["block_hash"]),
+            int(row["position"]),
+            int(row["height"]),
+        )
 
     def address_history(
-        self, pubkey_hash: bytes, limit: int = 200
+        self,
+        pubkey_hash: bytes,
+        limit: int = 200,
     ) -> list[tuple[bytes, int, int, int, bool]]:
-        """Return ``(txid, height, received, sent, coinbase)`` for ``pubkey_hash``.
-
-        Newest first, capped at ``limit``.
-        """
+        """Return address transaction history, newest first."""
         rows = self._query(
-            "SELECT txid, height, received, sent, coinbase FROM address_history"
-            " WHERE pubkey_hash = ? ORDER BY height DESC LIMIT ?",
-            (pubkey_hash, limit),
+            "SELECT txid, height, received, sent, coinbase "
+            "FROM address_history "
+            "WHERE pubkey_hash = ? "
+            "ORDER BY height DESC LIMIT ?",
+            (
+                pubkey_hash,
+                limit,
+            ),
         )
+
         return [
             (
                 bytes(row["txid"]),

@@ -815,7 +815,7 @@ class TestExplorer:
         ):
             status, body = self._get(server.url + path)
             assert status == 200, path
-            assert "ScarletCoin" in body, path
+            assert "WEED" in body, path
 
     def test_address_page_caps_the_unspent_list(self, rpc, key):
         """An address with hundreds of coins must not crash or produce a huge page."""
@@ -1318,7 +1318,7 @@ class TestPeerToPeer:
             assert wait_until(lambda: len(first.peers) == 1 and len(second.peers) == 1)
             peer = second.peers[0]
             assert peer.handshake_done.wait(10)
-            assert peer.user_agent.startswith("/scarletcoin:")
+            assert peer.user_agent.startswith("/weed:")
             # the listening port is gossiped, so the address book learns about it
             assert wait_until(lambda: len(second.addrbook) >= 1)
         finally:

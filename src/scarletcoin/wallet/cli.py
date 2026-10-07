@@ -1,4 +1,4 @@
-"""``scarlet-wallet``: create wallets, check balances and send ScarletCoins."""
+"""``weed-wallet``: create wallets, check balances and send WEEDs."""
 
 from __future__ import annotations
 
@@ -32,12 +32,12 @@ def default_wallet_path(datadir: Path, network: str) -> Path:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Return the argument parser for ``scarlet-wallet``."""
+    """Return the argument parser for ``weed-wallet``."""
     parser = argparse.ArgumentParser(
-        prog="scarlet-wallet",
-        description="A command line ScarletCoin wallet. Keys stay on this machine.",
+        prog="weed-wallet",
+        description="A command line WEED wallet. Keys stay on this machine.",
     )
-    parser.add_argument("--version", action="version", version=f"scarletcoin {__version__}")
+    parser.add_argument("--version", action="version", version=f"weed {__version__}")
     parser.add_argument(
         "--wallet", type=Path, help="wallet file (default: <datadir>/<network>/wallet.json)"
     )
@@ -65,7 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     send = subparsers.add_parser("send", help="send coins")
     send.add_argument("address", help="destination address")
-    send.add_argument("amount", help="amount in SCT, or 'all'")
+    send.add_argument("amount", help="amount in WEED, or 'all'")
     send.add_argument("--fee-rate", type=int, help="fee in scar per kilobyte")
     send.add_argument(
         "--dry-run", action="store_true", help="build and show the transaction without sending"
@@ -145,7 +145,7 @@ def _make_wallet(args: argparse.Namespace, *, need_keys: bool = False) -> Wallet
 
 
 def _amount(scar: int) -> str:
-    return f"{format_amount(scar)} SCT"
+    return f"{format_amount(scar)} WEED"
 
 
 # ------------------------------------------------------------------------ commands
@@ -400,7 +400,7 @@ _COMMANDS = {
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for ``scarlet-wallet``."""
+    """Entry point for ``weed-wallet``."""
     args = build_parser().parse_args(argv)
     setup_logging(args.log_level)
     maybe_check_version(args.datadir / args.network)

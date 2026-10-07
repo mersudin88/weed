@@ -25,10 +25,10 @@ dependencies = [
 gui = ["PyQt5>=5.15"]
 
 [project.scripts]
-scarlet-node = "scarletcoin.net.cli:main"
-scarlet-wallet = "scarletcoin.wallet.cli:main"
-scarlet-miner = "scarletcoin.miner.cli:main"
-scarlet-wallet-gui = "scarletcoin.gui.wallet_app:main"
+weed-node = "scarletcoin.net.cli:main"
+weed-wallet = "scarletcoin.wallet.cli:main"
+weed-miner = "scarletcoin.miner.cli:main"
+weed-wallet-gui = "scarletcoin.gui.wallet_app:main"
 scarlet-miner-gui = "scarletcoin.gui.miner_app:main"
 
 [project.urls]

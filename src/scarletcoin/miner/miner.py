@@ -101,7 +101,7 @@ class Miner:
         workers: int = 1,
         refresh_seconds: float = 15.0,
         max_rate: float | None = None,
-        tag: bytes = b"scarlet-miner",
+        tag: bytes = b"weed-miner",
         on_event: Callable[[str, dict], None] | None = None,
     ) -> None:
         self.client = client

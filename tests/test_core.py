@@ -220,8 +220,8 @@ class TestParams:
 
     def test_address_prefixes(self):
         key = PrivateKey.generate()
-        assert str(key.address(MAINNET.address_version)).startswith("S")
-        assert str(key.address(TESTNET.address_version)).startswith("t")
+        assert str(key.address(MAINNET.address_version)).startswith("WEEDc")
+        assert str(key.address(TESTNET.address_version)).startswith("WEEDt")
         assert TESTNET.address_version == REGTEST.address_version
 
 
@@ -401,7 +401,7 @@ class TestTransaction:
 
     def test_to_dict(self, key):
         data = self._payment(key).to_dict(127)
-        assert data["outputs"][0]["address"].startswith("t")
+        assert data["outputs"][0]["address"].startswith("WEEDt")
         assert data["inputs"][0]["index"] == 0
 
 

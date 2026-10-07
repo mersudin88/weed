@@ -145,5 +145,5 @@ class TestP2shTransactions:
         address = REGTEST.script_address_version, hash256(script)[:20]
         from scarletcoin.crypto.keys import Address
 
-        assert str(Address(*address)).startswith("T")
-        assert str(Address(REGTEST.address_version, hash256(script)[:20])).startswith("t")
+        assert str(Address(*address)).startswith("WEEDT")
+        assert str(Address(REGTEST.address_version, hash256(script)[:20])).startswith("WEEDt")

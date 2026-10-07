@@ -173,12 +173,12 @@ class TestAddress:
     def test_round_trip(self):
         address = PrivateKey.generate().address(63)
         assert Address.decode(str(address)) == address
-        assert str(address).startswith("S")
+        assert str(address).startswith("WEEDS")
 
     def test_network_prefixes_differ(self):
         key = PrivateKey.generate()
-        assert str(key.address(63))[0] == "S"
-        assert str(key.address(127))[0] == "t"
+        assert str(key.address(63)).startswith("WEEDS")
+        assert str(key.address(127)).startswith("WEEDt")
 
     def test_decode_checks_the_network(self):
         address = str(PrivateKey.generate().address(63))

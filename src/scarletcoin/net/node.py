@@ -143,7 +143,7 @@ class NodeConfig:
     seeds: tuple[str, ...] = ()
     """Extra seed hosts, resolved through DNS, on top of the network's own."""
     use_seeds: bool = True
-    user_agent: str = f"/scarletcoin:{__version__}/"
+    user_agent: str = f"/weed:{__version__}/"
 
     @property
     def params(self) -> ChainParams:

@@ -1,4 +1,4 @@
-"""``scarlet-miner``: mine ScarletCoins with a node's help."""
+"""``weed-miner``: mine WEEDs with a node's help."""
 
 from __future__ import annotations
 
@@ -36,12 +36,12 @@ def _format_rate(rate: float) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Return the argument parser for ``scarlet-miner``."""
+    """Return the argument parser for ``weed-miner``."""
     parser = argparse.ArgumentParser(
-        prog="scarlet-miner",
-        description="Mine ScarletCoins: get work from a node, search for a nonce, submit blocks.",
+        prog="weed-miner",
+        description="Mine WEED: get work from a node, search for a nonce, submit blocks.",
     )
-    parser.add_argument("--version", action="version", version=f"scarletcoin {__version__}")
+    parser.add_argument("--version", action="version", version=f"weed {__version__}")
     parser.add_argument("address", help="address the block rewards are paid to")
     parser.add_argument(
         "--workers",
@@ -70,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for ``scarlet-miner``."""
+    """Entry point for ``weed-miner``."""
     args = build_parser().parse_args(argv)
     setup_logging(args.log_level)
     maybe_check_version(args.datadir / args.network)

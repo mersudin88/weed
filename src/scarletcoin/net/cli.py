@@ -1,4 +1,4 @@
-"""``scarlet-node``: run a ScarletCoin node, or talk to a running one."""
+"""``weed-node``: run a WEED node, or talk to a running one."""
 
 from __future__ import annotations
 
@@ -30,17 +30,17 @@ logger = logging.getLogger("scarletcoin.node")
 
 _LOOPBACK = ("127.0.0.1", "::1", "localhost")
 
-#: Options that belong to ``scarlet-node`` itself rather than to ``run``.
+#: Options that belong to ``weed-node`` itself rather than to ``run``.
 _OWN_OPTIONS = ("--version", "-h", "--help")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Return the argument parser for ``scarlet-node``."""
+    """Return the argument parser for ``weed-node``."""
     parser = argparse.ArgumentParser(
-        prog="scarlet-node",
-        description="Run a ScarletCoin node: validate blocks, relay them and serve RPC.",
+        prog="weed-node",
+        description="Run a WEED node: validate blocks, relay them and serve RPC.",
     )
-    parser.add_argument("--version", action="version", version=f"scarletcoin {__version__}")
+    parser.add_argument("--version", action="version", version=f"weed {__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
     run = subparsers.add_parser("run", help="run the node (default)")
@@ -114,7 +114,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--rpc-advertise",
         metavar="URL",
         help="the address other people should use to reach this node, for example"
-        " https://scarletcoin.example.net; reported by getpublicnodes",
+        " https://weed.example.net; reported by getpublicnodes",
     )
     run.add_argument(
         "--rpc-cors",
@@ -389,10 +389,10 @@ def _prune_offline(config: NodeConfig, keep: int, *, vacuum: bool) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for ``scarlet-node``."""
+    """Entry point for ``weed-node``."""
     parser = build_parser()
     arguments = list(sys.argv[1:] if argv is None else argv)
-    # ``scarlet-node --rpc-public`` means ``scarlet-node run --rpc-public``: the
+    # ``weed-node --rpc-public`` means ``weed-node run --rpc-public``: the
     # daemon is what people came for. The parser's own options are left alone, or
     # ``--help`` would only ever describe ``run``.
     if not arguments or (arguments[0].startswith("-") and arguments[0] not in _OWN_OPTIONS):

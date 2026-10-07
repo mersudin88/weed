@@ -25,7 +25,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, utils
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from scarletcoin.crypto.base58 import Base58Error, b58check_decode, b58check_encode
-from scarletcoin.crypto.hashing import PUBKEY_HASH_LENGTH, hash160
+from scarletcoin.crypto.hashing import PUBKEY_HASH_LENGTH, hash160, hash256
 
 __all__ = [
     "SIGNATURE_LENGTH",
@@ -77,26 +77,35 @@ class Address:
             )
 
     def __str__(self) -> str:
-        return b58check_encode(self.version, self.hash)
+        payload = bytes([self.version]) + self.hash
+        checksum = hash256(payload)[:4]
+        from scarletcoin.crypto.base58 import b58encode
+        return "WEED" + b58encode(payload + checksum)
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
         return f"Address({self!s})"
 
     @classmethod
     def decode(cls, text: str, *, expected_version: int | None = None) -> Address:
-        """Parse an address string.
-
-        Raises:
-            InvalidKeyError: if the string is not a valid address (bad
-                characters, bad checksum, wrong network or wrong length).
-        """
+        """Parse a WEED address."""
         try:
-            version, payload = b58check_decode(text.strip(), expected_version=expected_version)
+            from scarletcoin.crypto.base58 import b58decode
+            text = text.strip()
+            if not text.startswith("WEED"):
+                raise InvalidKeyError(f"invalid address {text!r}: missing WEED prefix")
+            raw = b58decode(text[4:])
+            if len(raw) != 25:
+                raise InvalidKeyError(f"invalid address {text!r}: wrong length")
+            payload, checksum = raw[:-4], raw[-4:]
+            if hash256(payload)[:4] != checksum:
+                raise InvalidKeyError(f"invalid address {text!r}: bad checksum")
+            version = payload[0]
+            address_hash = payload[1:]
+            if expected_version is not None and version != expected_version:
+                raise InvalidKeyError(f"invalid address {text!r}: wrong network")
+            return cls(version, address_hash)
         except Base58Error as exc:
             raise InvalidKeyError(f"invalid address {text!r}: {exc}") from exc
-        if len(payload) != PUBKEY_HASH_LENGTH:
-            raise InvalidKeyError(f"invalid address {text!r}: wrong payload length")
-        return cls(version, payload)
 
     @classmethod
     def is_valid(cls, text: str, *, expected_version: int | None = None) -> bool:

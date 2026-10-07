@@ -108,14 +108,14 @@ def _page(server: RpcServer, title: str, body: str) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{escape(title)} - ScarletCoin explorer</title>
+<title>{escape(title)} - WEED explorer</title>
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <style>{_STYLE}</style>
 {live_script}
 </head>
 <body>
 <header>
-  <h1><a href="/">ScarletCoin</a></h1>
+  <h1><a href="/">WEED</a></h1>
   <nav>
     <a href="/">Overview</a>
     <a href="/blocks">Blocks</a>
@@ -132,8 +132,8 @@ def _page(server: RpcServer, title: str, body: str) -> str:
 </header>
 <main>{body}</main>
 <footer>
-  ScarletCoin node on the {network} network &mdash; block explorer served by the node itself<br>
-  <a href="https://github.com/alessio-ds/ScarletCoin">github.com/alessio-ds/ScarletCoin</a>
+  WEED node on the {network} network &mdash; block explorer served by the node itself<br>
+  <a href="https://github.com/alessio-ds/WEED">github.com/alessio-ds/WEED</a>
 </footer>
 </body>
 </html>

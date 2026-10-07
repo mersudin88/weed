@@ -1,4 +1,4 @@
-/* Native SHA-256 nonce scan for the ScarletCoin miner.
+/* Native SHA-256 nonce scan for the WEED miner.
  *
  * Compiled on demand and loaded through ctypes; the pure-Python loop in
  * solver.py is the fallback when this is unavailable.

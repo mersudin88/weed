@@ -203,17 +203,17 @@ class ChainParams:
 
 
 #: Text embedded in the genesis coinbase of every network.
-_GENESIS_MESSAGE: Final[bytes] = b"ScarletCoin: a small chain, honestly built"
+_GENESIS_MESSAGE: Final[bytes] = b"WEED: a small chain, honestly built"
 
 
 MAINNET = ChainParams(
     name="mainnet",
-    magic=b"SCRL",
-    address_version=63,  # addresses start with "S"
+    magic=b"WEED",
+    address_version=87,  # addresses start with "S"
     wif_version=191,
-    script_address_version=50,  # P2SH addresses start with "M"
-    default_p2p_port=20333,
-    default_rpc_port=20332,
+    script_address_version=55,  # P2SH addresses start with "M"
+    default_p2p_port=28333,
+    default_rpc_port=28332,
     target_spacing=60,
     retarget_interval=60,
     pow_limit_bits=0x1E0FFFFF,
@@ -222,7 +222,7 @@ MAINNET = ChainParams(
     retarget_measure_fork_height=10563,
     genesis_timestamp=1_700_000_000,
     genesis_bits=0x1E0FFFFF,
-    genesis_nonce=816_317,
+    genesis_nonce=182551,
     genesis_message=_GENESIS_MESSAGE,
     # Long-lived host names of the network's public nodes. A name may hold
     # several A/AAAA records; a starting node tries all of them and then learns
@@ -259,7 +259,7 @@ TESTNET = ChainParams(
     bip44_coin_type=1,
     genesis_timestamp=1_700_000_001,
     genesis_bits=0x1E0FFFFF,
-    genesis_nonce=154_650,
+    genesis_nonce=715_677,
     genesis_message=_GENESIS_MESSAGE + b" (testnet)",
     seeds=(),
     auxpow_chain_id=2,
@@ -282,7 +282,7 @@ REGTEST = ChainParams(
     bip44_coin_type=1,
     genesis_timestamp=1_700_000_002,
     genesis_bits=0x207FFFFF,
-    genesis_nonce=5,
+    genesis_nonce=1,
     genesis_message=_GENESIS_MESSAGE + b" (regtest)",
     seeds=(),
     auxpow_chain_id=3,

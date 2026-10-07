@@ -178,7 +178,7 @@ def _start_local(
         raise NodeChoiceError(f"the node did not answer in time:\n\n{node.tail_log()}")
     print(f"node running at {node.url}; it keeps running after this command ends")
     print(f"log: {node.log_path}")
-    print("stop it with:  scarlet-node rpc stop")
+    print("stop it with:  weed-node rpc stop")
     return NodeConnection(node.url, node.token)
 
 
@@ -280,7 +280,7 @@ def _use_public(
 def _ask_which_node(args: argparse.Namespace, *, for_mining: bool) -> NodeConnection:
     """Offer the choice between a node here and a public one."""
     network, datadir = args.network, Path(args.datadir)
-    print(f"\nScarletCoin needs a {network} node to talk to.\n")
+    print(f"\nWEED needs a {network} node to talk to.\n")
     print("  1) Run a node on this machine")
     print("     validates everything itself, needs disk space and time to catch up")
     print(f"     {describe_local_chain(network, datadir, short=True)}")

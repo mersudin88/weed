@@ -15,6 +15,7 @@ import secrets
 import socket
 import subprocess
 import sys
+import sysconfig
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -53,7 +54,6 @@ class LocalNodeError(RuntimeError):
 def _port_busy(port: int, host: str = "127.0.0.1") -> bool:
     """Whether something already listens on ``host:port``."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             probe.bind((host, port))
         except OSError:
@@ -78,8 +78,18 @@ def node_command(
     """
     launcher: list[str]
     directory = Path(sys.executable).parent
-    for name in ("scarlet-node", "scarlet-node.exe"):
-        candidate = directory / name
+    scripts_directory = Path(sysconfig.get_path("scripts"))
+
+    for candidate in (
+        scripts_directory / "weed-node",
+        scripts_directory / "weed-node.exe",
+        directory / "weed-node",
+        directory / "weed-node.exe",
+        scripts_directory / "scarlet-node",
+        scripts_directory / "scarlet-node.exe",
+        directory / "scarlet-node",
+        directory / "scarlet-node.exe",
+    ):
         if candidate.exists():
             launcher = [str(candidate)]
             break
