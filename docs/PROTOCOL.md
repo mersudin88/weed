@@ -1,4 +1,4 @@
-# ScarletCoin protocol and consensus reference
+# WEED protocol and consensus reference
 
 Everything here is normative: two implementations that agree on this document
 will agree on the same chain. Byte order is little-endian unless stated
@@ -21,7 +21,7 @@ otherwise.
 
 ## Units
 
-The smallest unit is the **scar**. One SCT is 100 000 000 scar. Amounts are
+The smallest unit is the **scar**. One WEED is 100 000 000 scar. Amounts are
 always integers; no code path uses floating point for money.
 
 ## Hashes
@@ -99,7 +99,7 @@ decided.
 **Signature hash** for input `i` spending an output worth `v`:
 
 ```
-hash256( varbytes("ScarletCoin/sighash/2") || body || uint32(i) || uint64(v) || varbytes(script_code) )
+hash256( varbytes("WEED/sighash/2") || body || uint32(i) || uint64(v) || varbytes(script_code) )
 ```
 
 `script_code` is the *type byte plus hash* of a P2PKH output, or the full redeem
@@ -246,7 +246,7 @@ subsidy(height) = 50 · COIN >> (height / halving_interval)      (0 after 64 hal
 ```
 
 With `halving_interval = 210 000` the total ever created is just under
-21 000 000 SCT. A coinbase may pay *at most* `subsidy(height)` plus the fees of
+21 000 000 WEED. A coinbase may pay *at most* `subsidy(height)` plus the fees of
 the other transactions in the block; paying less is allowed and destroys the
 difference.
 
@@ -314,7 +314,7 @@ longer valid are dropped.
 | P2PKH address version | 63 (`S…`) | 127 (`t…`) | 127 (`t…`) |
 | P2SH address version | 50 (`M…`) | 65 (`T…`) | 65 (`T…`) |
 | WIF version | 191 | 239 | 239 |
-| P2P / RPC port | 20333 / 20332 | 30333 / 30332 | 40333 / 40332 |
+| P2P / RPC port | 28333 / 28332 | 30333 / 30332 | 40333 / 40332 |
 | `target_spacing` | 60 s | 60 s | 10 s |
 | `retarget_interval` | 60 | 60 | 20 |
 | `per_block_retarget` | true | true | false |
@@ -530,7 +530,7 @@ alongside the seed.
 
 The plaintext inside `crypto` is `{"seed": "<hex 64 bytes>", "imported": […]}`,
 where each imported entry is `{"wif", "label", "created"}`. The additional
-authenticated data is `scarletcoin-wallet-v2:<network>`, so a wallet file cannot
+authenticated data is `weed-wallet-v2:<network>`, so a wallet file cannot
 be replayed onto another network. Unencrypted wallets carry the same `seed` and
 `imported` keys at the top level instead. Addresses stay readable either way,
 which lets the wallet show balances while locked. Version 1 wallets (a plain

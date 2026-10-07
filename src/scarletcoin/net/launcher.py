@@ -85,10 +85,6 @@ def node_command(
         scripts_directory / "weed-node.exe",
         directory / "weed-node",
         directory / "weed-node.exe",
-        scripts_directory / "scarlet-node",
-        scripts_directory / "scarlet-node.exe",
-        directory / "scarlet-node",
-        directory / "scarlet-node.exe",
     ):
         if candidate.exists():
             launcher = [str(candidate)]

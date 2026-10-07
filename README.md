@@ -1,9 +1,9 @@
-# ScarletCoin (SCT)
+# WEED
 
 A complete, working proof-of-work blockchain written 100% in Python. Node,
 wallet, miner, explorer — every line of it, in Python.
 
-ScarletCoin is a real cryptocurrency: a UTXO-based blockchain, a peer-to-peer
+WEED is a real cryptocurrency: a UTXO-based blockchain, a peer-to-peer
 network that reaches consensus on its own, deterministic wallets with proper
 keys and signatures, a CPU miner, and a live block explorer served by every
 node. It runs the same consensus model as Bitcoin — proof of work, difficulty
@@ -15,30 +15,30 @@ P2P links).
 
 <div align="center">
 
-[![Download for Windows (64-bit)](https://img.shields.io/badge/Download-Windows_64--bit-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/alessio-ds/ScarletCoin/releases/download/v2.7.6/ScarletCoin-2.7.6-win64.zip)
-[![Windows installer](https://img.shields.io/badge/Windows_Installer-.exe-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/alessio-ds/ScarletCoin/releases/download/v2.7.6/ScarletCoin-Setup-2.7.6.exe)
+[![Download for Windows (64-bit)](https://img.shields.io/badge/Download-Windows_64--bit-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-win64.zip)
+[![Windows installer](https://img.shields.io/badge/Windows_Installer-.exe-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-Setup-2.7.6.exe)
 
-[![Download for Ubuntu](https://img.shields.io/badge/Download-Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://github.com/alessio-ds/ScarletCoin/releases/download/v2.7.6/ScarletCoin-2.7.6-linux-x86_64.tar.gz)
-[![Download for Fedora](https://img.shields.io/badge/Download-Fedora-51A2DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/alessio-ds/ScarletCoin/releases/download/v2.7.6/ScarletCoin-2.7.6-linux-fc44-x86_64.tar.gz)
+[![Download for Ubuntu](https://img.shields.io/badge/Download-Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-linux-x86_64.tar.gz)
+[![Download for Fedora](https://img.shields.io/badge/Download-Fedora-51A2DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-linux-fc44-x86_64.tar.gz)
 
-[![Download for macOS (Apple Silicon)](https://img.shields.io/badge/Download-macOS_Apple_Silicon-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alessio-ds/ScarletCoin/releases/download/v2.7.6/ScarletCoin-2.7.6-macos-arm64.tar.gz)
-[![Download for macOS (Intel)](https://img.shields.io/badge/Download-macOS_Intel-555555?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alessio-ds/ScarletCoin/releases/download/v2.7.6/ScarletCoin-2.7.6-macos-x86_64.tar.gz)
+[![Download for macOS (Apple Silicon)](https://img.shields.io/badge/Download-macOS_Apple_Silicon-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-macos-arm64.tar.gz)
+[![Download for macOS (Intel)](https://img.shields.io/badge/Download-macOS_Intel-555555?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-macos-x86_64.tar.gz)
 
 **No Python. No dependencies. Download, extract, run.**
 
 Or use it straight from your browser, nothing to install:
 
-[![Open the ScarletCoin Web Wallet](https://img.shields.io/badge/Open-Web_Wallet-e33a4e?style=for-the-badge&logo=github&logoColor=white)](https://alessio-ds.github.io/scarletcoin-web-wallet/)
+[![Open the WEED Web Wallet](https://img.shields.io/badge/Open-Web_Wallet-e33a4e?style=for-the-badge&logo=github&logoColor=white)](https://alessio-ds.github.io/weed-web-wallet/)
 
 </div>
 
 ```
 ┌────────────────┐   getblocktemplate / submitblock   ┌───────────────┐
-│  scarlet-miner │◄─────────── JSON-RPC ─────────────►│               │
+│  weed-miner │◄─────────── JSON-RPC ─────────────►│               │
 └────────────────┘                                    │               │        ┌───────────────┐
-                                                      │  scarlet-node │◄─ P2P ►│  other nodes  │
+                                                      │  weed-node │◄─ P2P ►│  other nodes  │
 ┌────────────────┐   balances, history, broadcast     │               │        └───────────────┘
-│ scarlet-wallet │◄─────────── JSON-RPC ─────────────►│               │
+│ weed-wallet │◄─────────── JSON-RPC ─────────────►│               │
 └────────────────┘   (keys never leave the wallet)    └───────┬───────┘
                                                               │ HTTP
                                                      browser ─┘ block explorer
@@ -50,30 +50,30 @@ Or use it straight from your browser, nothing to install:
 
 ### Abstract
 
-ScarletCoin is a peer-to-peer electronic cash system: a chain of blocks whose
+WEED is a peer-to-peer electronic cash system: a chain of blocks whose
 validity is checked by every participant, so no participant has to be trusted.
 Coins exist as unspent transaction outputs (UTXOs) locked to public-key hashes;
 spending one means revealing the key and producing a valid ECDSA signature.
 Miners compete to solve SHA-256d proof of work; the chain with the greatest
 cumulative work wins, and any node that sees a heavier branch reorganises to it
 automatically. The money supply is fixed by consensus rules that no party can
-change: a geometric subsidy schedule converging to a 21,000,000 SCT cap.
+change: a geometric subsidy schedule converging to a 21,000,000 WEED cap.
 
 ### Monetary policy
 
 | Parameter | Value |
 |---|---|
-| Ticker / unit | **SCT** · 1 SCT = 100,000,000 *scar* (smallest indivisible unit) |
-| **Maximum supply** | **21,000,000 SCT** (21,000,000,000,000,000 scar) |
-| Initial block subsidy | 50 SCT |
+| Ticker / unit | **WEED** · 1 WEED = 100,000,000 *weed* (smallest indivisible unit) |
+| **Maximum supply** | **21,000,000 WEED** (21,000,000,000,000,000 weed) |
+| Initial block subsidy | 50 WEED |
 | **Halving** | every **210,000 blocks** (~4 years at 1 block/min) |
-| Subsidy schedule | 50 → 25 → 12.5 → 6.25 → … → 0 scar after 33 halvings (~13 years) |
+| Subsidy schedule | 50 → 25 → 12.5 → 6.25 → … → 0 weed after 33 halvings (~13 years) |
 | Supply curve | strictly convergent: the sum of all subsidies + fees can never exceed the cap |
 | Coinbase maturity | 100 confirmations before mined coins can be spent |
 | Premine | none — the genesis coinbase pays a provably unspendable hash |
 
 Because the subsidy halves on a fixed schedule, the total ever minted is
-`210,000 × 50 × (1 + ½ + ¼ + … ) = 21,000,000` SCT — exactly. Fees are paid
+`210,000 × 50 × (1 + ½ + ¼ + … ) = 21,000,000` WEED — exactly. Fees are paid
 from existing coins, so they never increase the supply.
 
 ### Consensus
@@ -92,7 +92,7 @@ from existing coins, so they never increase the supply.
 
 ### Difficulty adjustment
 
-ScarletCoin retargets its proof-of-work difficulty **every block** (starting in
+WEED retargets its proof-of-work difficulty **every block** (starting in
 2.3.0), not once per retargeting period like Bitcoin. Mainnet adopted per-block
 retargeting at height **10496**; blocks before that follow the periodic rule, so
 a node re-validating the whole chain still accepts the pre-fork history. Each
@@ -129,8 +129,8 @@ the miners that are active *now*, not the ones who left.
 ### Transactions & scripting
 
 - **UTXO model** — coins are unspent outputs; no account balances stored anywhere.
-- **P2PKH** — pay to public-key hash (standard addresses, prefix `S`).
-- **P2SH** — pay to script hash (prefix `M`), enabling **multisig** and single-key redeem scripts.
+- **P2PKH** — pay to public-key hash (standard WEED addresses begin with `WEED`).
+- **P2SH** — pay to script hash (mainnet addresses begin with `WEEDP`), enabling **multisig** and single-key redeem scripts.
 - **Replace-by-fee** — raise a transaction's fee while it is still unconfirmed.
 - **Deterministic transaction ids** — no malleability.
 - **lock_time** — absolute block-height locks.
@@ -152,7 +152,7 @@ the miners that are active *now*, not the ones who left.
 - **Header-first sync** with parallel block download; orphan expiry, ping, and ban for peers that send invalid blocks.
 - Encrypted, authenticated wire protocol — every message after the handshake is ChaCha20-Poly1305 sealed.
 - Nodes discover each other automatically; `mainnet` bootstraps from
-  `scarletcoin.remotewire.net` and needs zero configuration.
+  `the configured WEED public nodes` and needs zero configuration.
 - JSON-RPC API with bearer-token auth, plus a read-only public endpoint mode.
 - Block explorer with WebSocket live updates and a Prometheus `/metrics` endpoint.
 - Pruning: drop old block bodies, keep every header, the UTXO set, and every balance.
@@ -161,9 +161,9 @@ the miners that are active *now*, not the ones who left.
 
 | Program | What it does |
 |---|---|
-| `scarlet-node` | full node: validates everything from genesis, serves RPC + explorer |
-| `scarlet-wallet` | BIP-39/32/44 HD wallet; signs locally, keys never leave the machine |
-| `scarlet-miner` | CPU miner across multiple cores; pure-Python SHA-256d (~1 MH/s/core) |
+| `weed-node` | full node: validates everything from genesis, serves RPC + explorer |
+| `weed-wallet` | BIP-39/32/44 HD wallet; signs locally, keys never leave the machine |
+| `weed-miner` | CPU miner across multiple cores; pure-Python SHA-256d (~1 MH/s/core) |
 | GUI apps | Qt desktop wallet and miner, ready-to-run releases for Windows & Linux |
 
 ---
@@ -178,14 +178,14 @@ installation. What's inside:
 
 | File | What it is |
 |---|---|
-| `scarlet-wallet-gui` | the desktop wallet |
-| `scarlet-miner-gui` | the desktop miner |
-| `scarlet-node` | the node, started in the background by the other two |
+| `weed-wallet-gui` | the desktop wallet |
+| `weed-miner-gui` | the desktop miner |
+| `weed-node` | the node, started in the background by the other two |
 
 Extract the archive anywhere and double-click the wallet or the miner. If no
 node is running yet, the first window to open starts a local node in the
 background (same network and datadir) and stops it again when the last window
-closes. On Linux and macOS, `chmod +x scarlet-*` after extracting. The Windows
+closes. On Linux and macOS, `chmod +x weed-*` after extracting. The Windows
 installer `.exe` installs per user (no admin rights) and adds Start-menu
 shortcuts for both applications.
 
@@ -209,32 +209,32 @@ pip install -e ".[gui]"
 
 ```sh
 # 1. join mainnet — no configuration, it finds the network by itself
-uv run scarlet-node --network mainnet
+uv run weed-node --network mainnet
 
 # 2. create a wallet (prints your 12-word recovery phrase)
-uv run scarlet-wallet --network mainnet create
+uv run weed-wallet --network mainnet create
 
 # 3. mine to your address
-uv run scarlet-miner --network mainnet SXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+uv run weed-miner --network mainnet WEEDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # 4. spend coins
-uv run scarlet-wallet --network mainnet balance
-uv run scarlet-wallet --network mainnet send SYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY 12.5
-uv run scarlet-wallet --network mainnet history
+uv run weed-wallet --network mainnet balance
+uv run weed-wallet --network mainnet send WEEDYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY 12.5
+uv run weed-wallet --network mainnet history
 ```
 
-Open <http://127.0.0.1:20332> for the explorer. Want a private playground
+Open <http://127.0.0.1:28332> for the explorer. Want a private playground
 instead? `regtest` gives you your own local chain with trivial proof of work —
-same commands with `--network regtest`, and `scarlet-node rpc --network regtest
+same commands with `--network regtest`, and `weed-node rpc --network regtest
 generate 5` mines instantly.
 
 ### Networks
 
 | | mainnet | testnet | regtest |
 |---|---|---|---|
-| Address prefix | `S` | `t` | `t` |
-| P2SH address prefix | `M` | `T` | `T` |
-| P2P / RPC port | 20333 / 20332 | 30333 / 30332 | 40333 / 40332 |
+| Address prefix | `WEED` | `WEEDt` | `WEEDt` |
+| P2SH address prefix | `WEEDP` | `WEEDT` | `WEEDT` |
+| P2P / RPC port | 28333 / 28332 | 30333 / 30332 | 40333 / 40332 |
 | Target spacing | 60 s | 60 s | 10 s |
 | Retarget every | 1 block | 1 block | 20 blocks |
 | Coinbase maturity | 100 blocks | 20 blocks | 2 blocks |
@@ -248,9 +248,9 @@ answer balance queries and `sendrawtransaction` for anyone; the choice is
 presented with each node's height, peer count and latency:
 
 ```sh
-uv run scarlet-wallet --network mainnet --node local    info   # a node here
-uv run scarlet-wallet --network mainnet --node public   info   # the best public one
-uv run scarlet-wallet --network mainnet --node ask      info   # ask me again
+uv run weed-wallet --network mainnet --node local    info   # a node here
+uv run weed-wallet --network mainnet --node public   info   # the best public one
+uv run weed-wallet --network mainnet --node ask      info   # ask me again
 ```
 
 Running your own node is the trustless option, and it's one command.
@@ -258,19 +258,19 @@ Running your own node is the trustless option, and it's one command.
 ### The three programs
 
 ```sh
-scarlet-node   [--network mainnet|testnet|regtest] [--datadir DIR]
+weed-node   [--network mainnet|testnet|regtest] [--datadir DIR]
                [--p2p-port N] [--seed HOST] [--addnode HOST:PORT]
                [--rpc-port N] [--rpc-token TOKEN] [--rpc-public] [--prune BLOCKS]
-scarlet-node rpc  METHOD [PARAMS...]     # call a running node
-scarlet-node info                        # chain status in plain text
+weed-node rpc  METHOD [PARAMS...]     # call a running node
+weed-node info                        # chain status in plain text
 
-scarlet-wallet create [--no-password]    # new wallet, encrypted by default
-scarlet-wallet restore [PHRASE]          # rebuild from the recovery phrase
-scarlet-wallet info | balance | addresses | unspent | history
-scarlet-wallet send ADDRESS AMOUNT|all [--fee-rate N] [--dry-run]
-scarlet-wallet export [ADDRESS] | import [WIF]
+weed-wallet create [--no-password]    # new wallet, encrypted by default
+weed-wallet restore [PHRASE]          # rebuild from the recovery phrase
+weed-wallet info | balance | addresses | unspent | history
+weed-wallet send ADDRESS AMOUNT|all [--fee-rate N] [--dry-run]
+weed-wallet export [ADDRESS] | import [WIF]
 
-scarlet-miner ADDRESS [--workers N] [--max-rate HASHES_PER_SEC]
+weed-miner ADDRESS [--workers N] [--max-rate HASHES_PER_SEC]
 ```
 
 ## Layout
@@ -288,10 +288,10 @@ tests/       437 tests: two-node networking, reorganisations, pruning, TPS load
 docs/        protocol and consensus reference, network operator's guide
 ```
 
-## Mine ScarletCoin with Bitcoin ASICs
+## Mine WEED with Bitcoin ASICs
 
-ScarletCoin supports **merged mining (AuxPoW)**: standard Bitcoin SHA-256d
-ASICs can mine ScarletCoin with **no firmware change**.  The miner hashes the
+WEED supports **merged mining (AuxPoW)**: standard Bitcoin SHA-256d
+ASICs can mine WEED with **no firmware change**.  The miner hashes the
 80-byte headers it already hashes; the pool wraps that work in an AuxPoW proof.
 
 ```text
@@ -299,17 +299,17 @@ Your Antminer / Whatsminer
         │
         │ Stratum V1
         ▼
-  Merged-mining pool  ──►  ScarletCoin node
+  Merged-mining pool  ──►  WEED node
         │
-        └──►  SCT block reward
+        └──►  WEED block reward
 ```
 
 Merged mining is **active on mainnet from height 47,000**, and blocks have been
-mined through the reference Stratum bridge.  Note that this mines SCT only —
+mined through the reference Stratum bridge.  Note that this mines WEED only —
 the parent header is supplied by the pool, not by Bitcoin, so no BTC is
 produced.  See [docs/MERGED-MINING.md](docs/MERGED-MINING.md).
 
-* [docs/MERGED-MINING.md](docs/MERGED-MINING.md) — mining SCT with existing ASICs
+* [docs/MERGED-MINING.md](docs/MERGED-MINING.md) — mining WEED with existing ASICs
 * [docs/AUXPOW.md](docs/AUXPOW.md) — consensus-level AuxPoW specification
 * [docs/ACTIVATION.md](docs/ACTIVATION.md) — activation height and upgrade notes
 * [docs/POOL-OPERATIONS.md](docs/POOL-OPERATIONS.md) — running a Stratum bridge
@@ -330,7 +330,7 @@ uv run python tools/tps_test.py init --network mainnet   # measure real-world TP
 * [docs/RUNNING-A-NETWORK.md](docs/RUNNING-A-NETWORK.md) — run a public node and
   let others discover it.
 * [docs/AUXPOW.md](docs/AUXPOW.md) — AuxPoW consensus and block format.
-* [docs/MERGED-MINING.md](docs/MERGED-MINING.md) — BTC→SCT mining operator guide.
+* [docs/MERGED-MINING.md](docs/MERGED-MINING.md) — BTC→WEED mining operator guide.
 * [docs/ACTIVATION.md](docs/ACTIVATION.md) — AuxPoW mainnet activation plan.
 * [docs/CHANGES-V2.md](docs/CHANGES-V2.md) / [docs/CHANGES-V2.2.md](docs/CHANGES-V2.2.md) / [docs/CHANGES-V2.6.md](docs/CHANGES-V2.6.md) / [docs/CHANGES-V2.7.md](docs/CHANGES-V2.7.md) — release history.
 

@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 #: How long a cached answer is reused before PyPI is asked again.
 _CACHE_SECONDS = 86400  # 24 hours
 
-#: PyPI JSON endpoint for the scarletcoin package.
-_PYPI_URL = "https://pypi.org/pypi/scarletcoin/json"
+#: PyPI JSON endpoint for the weed package.
+_PYPI_URL = "https://pypi.org/pypi/weed/json"
 
 #: How long we wait for PyPI to answer (seconds).
 _TIMEOUT = 5.0
@@ -68,7 +68,7 @@ def _fetch_latest() -> str | None:
     try:
         import urllib.request
 
-        req = urllib.request.Request(_PYPI_URL, headers={"User-Agent": "scarletcoin-version-check"})
+        req = urllib.request.Request(_PYPI_URL, headers={"User-Agent": "weed-version-check"})
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
             data = json.loads(resp.read())
         return str(data.get("info", {}).get("version") or "")
@@ -84,10 +84,10 @@ def check_version(datadir: str | Path = ".") -> str | None:
     start-up.  Returns ``None`` when the running version is the latest, the check
     is suppressed by the environment, or PyPI cannot be reached.
 
-    Set the environment variable ``SCARLETCOIN_NO_VERSION_CHECK=1`` to skip the
+    Set the environment variable ``WEED_NO_VERSION_CHECK=1`` to skip the
     check entirely (useful in air-gapped environments).
     """
-    if os.environ.get("SCARLETCOIN_NO_VERSION_CHECK"):
+    if os.environ.get("WEED_NO_VERSION_CHECK"):
         return None
     cached_version, cached_at = _load_cache(datadir)
     if cached_version and time.time() - cached_at < _CACHE_SECONDS:

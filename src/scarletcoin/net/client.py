@@ -1,4 +1,4 @@
-"""A small JSON-RPC client for talking to a ScarletCoin node."""
+"""A small JSON-RPC client for talking to a WEED node."""
 
 from __future__ import annotations
 

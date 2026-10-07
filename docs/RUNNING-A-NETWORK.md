@@ -1,4 +1,4 @@
-# Running a real ScarletCoin network
+# Running a real WEED network
 
 This is the operator's guide: how to run a node other people can connect to, how
 their nodes find yours automatically, and how to prove that everybody is on the
@@ -7,7 +7,7 @@ same chain.
 * [What "the same network" means](#what-the-same-network-means)
 * [Which ports do what](#which-ports-do-what)
 * [Are you launching a network or joining one?](#are-you-launching-a-network-or-joining-one)
-* [The ScarletCoin mainnet seed](#the-scarletcoin-mainnet-seed)
+* [The WEED mainnet seed](#the-weed-mainnet-seed)
 * [Worked example: Alpine Linux, Caddy and a DDNS name](#worked-example-alpine-linux-caddy-and-a-ddns-name)
 * [Launching a network](#launching-a-network)
 * [Joining a network](#joining-a-network)
@@ -42,16 +42,16 @@ mixing them up is the most common way to end up with a node nobody can reach.
 
 | Port | Protocol | Who connects | Exposure |
 |---|---|---|---|
-| 20333 (mainnet), 30333 (testnet) | **raw TCP**, the peer-to-peer protocol | other nodes | must be reachable from the internet, **directly** |
-| 20332 (mainnet), 30332 (testnet) | HTTP: JSON-RPC **and** the explorer | you, and explorer visitors | bind to localhost; publish only through a reverse proxy |
+| 28333 (mainnet), 30333 (testnet) | **raw TCP**, the peer-to-peer protocol | other nodes | must be reachable from the internet, **directly** |
+| 28332 (mainnet), 30332 (testnet) | HTTP: JSON-RPC **and** the explorer | you, and explorer visitors | bind to localhost; publish only through a reverse proxy |
 
 The peer-to-peer port carries a binary framed protocol, not HTTP. An HTTP
 reverse proxy (Caddy, nginx, Cloudflare's orange cloud) **cannot** carry it. Peers
-open a plain TCP connection to port 20333 and speak `version`/`verack`; anything
+open a plain TCP connection to port 28333 and speak `version`/`verack`; anything
 that terminates HTTP will simply close it.
 
-So: forward or open TCP 20333 at the firewall, and use your web server only for
-the explorer on 20332.
+So: forward or open TCP 28333 at the firewall, and use your web server only for
+the explorer on 28332.
 
 ## Are you launching a network or joining one?
 
@@ -61,26 +61,26 @@ the explorer on 20332.
 MAINNET = ChainParams(
     ...
     # Add the long-lived host names of your network's public nodes here, e.g.
-    # seeds=("seed.example.org", "seed2.example.org:20333").
+    # seeds=("seed.example.org", "seed2.example.org:28333").
     seeds=(),
 )
 ```
 
-That is deliberate, not an oversight. ScarletCoin is a hobby chain: there is no
+That is deliberate, not an oversight. WEED is a hobby chain: there is no
 existing network to join, so the addresses of the first public nodes cannot be
 baked in by me — they are yours. Whoever launches the network publishes one or
 two host names, and from then on new nodes bootstrap from them automatically.
 
-## The ScarletCoin mainnet seed
+## The WEED mainnet seed
 
 `mainnet` ships with one published seed:
 
 ```python
-    seeds=("scarletcoin.remotewire.net", "45.126.126.139"),
-    public_nodes=("https://scarletcoin.remotewire.net",),
+    seeds=("WEED public node", "45.126.126.139"),
+    public_nodes=("https://WEED public node",),
 ```
 
-`seeds` are for nodes (raw TCP, port 20333) and `public_nodes` for wallets and
+`seeds` are for nodes (raw TCP, port 28333) and `public_nodes` for wallets and
 miners (HTTPS, the RPC port behind a proxy). The two lists are separate because the
 two protocols are: an HTTP proxy can serve the second and cannot carry the first.
 
@@ -98,7 +98,7 @@ the seed being up.
 ## Worked example: Alpine Linux, Caddy and a DDNS name
 
 This is the exact recipe for the reference node: an Alpine server at
-`45.126.126.139`, reachable as `scarletcoin.remotewire.net`, with Caddy already
+`45.126.126.139`, reachable as `WEED public node`, with Caddy already
 installed and serving the explorer over HTTPS.
 
 The finished layout:
@@ -107,29 +107,29 @@ The finished layout:
                         the internet
                              │
         ┌────────────────────┴─────────────────────┐
-        │ TCP 20333                     TCP 443/80 │
+        │ TCP 28333                     TCP 443/80 │
         │ (raw peer-to-peer,            (HTTPS)    │
         │  no proxy possible)                      │
         ▼                                          ▼
   ┌───────────────┐                          ┌───────────┐
-  │  scarlet-node │◄── 127.0.0.1:20332 ──────│   Caddy   │
+  │  weed-node │◄── 127.0.0.1:28332 ──────│   Caddy   │
   │   (OpenRC)    │      HTTP, explorer      │  (OpenRC) │
   └───────┬───────┘                          └───────────┘
           │
-   /var/lib/scarletcoin/mainnet/{chain.sqlite3,peers.json,rpc.token}
+   /var/lib/weed/mainnet/{chain.sqlite3,peers.json,rpc.token}
 ```
 
 ### 1. Point the name at the server, with no proxy in between
 
-`scarletcoin.remotewire.net` must be a plain `A` record for `45.126.126.139`. If
+`WEED public node` must be a plain `A` record for `45.126.126.139`. If
 your DNS provider offers HTTP proxying (Cloudflare's orange cloud, for example),
-**turn it off** for this record: a proxy would break port 20333 and answer with
+**turn it off** for this record: a proxy would break port 28333 and answer with
 its own address instead of yours.
 
 Check from somewhere that is not the server:
 
 ```sh
-dig +short scarletcoin.remotewire.net      # must print 45.126.126.139
+dig +short WEED public node      # must print 45.126.126.139
 ```
 
 At the time of writing this name answered `138.199.60.12`, so the record still
@@ -142,12 +142,12 @@ timer:
 
 ```sh
 apk add curl
-printf '*/5 * * * * curl -fsS "https://your-provider/update?host=scarletcoin&token=…" >/dev/null\n' \
+printf '*/5 * * * * curl -fsS "https://your-provider/update?host=weed&token=…" >/dev/null\n' \
   >> /etc/crontabs/root
 rc-service crond restart
 ```
 
-If you would rather keep `scarletcoin.remotewire.net` behind a proxy for the web
+If you would rather keep `WEED public node` behind a proxy for the web
 side, publish a second, unproxied name for the peer-to-peer side (say
 `seed.remotewire.net`), and put *that* one in `ChainParams.seeds`.
 
@@ -162,11 +162,11 @@ apk add --no-cache python3 git uv ca-certificates
 #   apk add --no-cache python3 py3-pip git ca-certificates
 #   and replace the uv commands below with pip in a venv
 
-adduser -D -H -h /var/lib/scarletcoin -s /sbin/nologin scarlet
-install -d -o scarlet -g scarlet -m 0750 /var/lib/scarletcoin /var/log/scarletcoin
+adduser -D -H -h /var/lib/weed -s /sbin/nologin weed
+install -d -o weed -g weed -m 0750 /var/lib/weed /var/log/weed
 
-git clone https://github.com/alessio-ds/ScarletCoin /opt/scarletcoin
-cd /opt/scarletcoin
+git clone https://github.com/alessio-ds/WEED /opt/weed
+cd /opt/weed
 
 # Build the virtual environment against Alpine's own Python. Without this, uv
 # may download a Python of its own into /root/.local/share/uv/, which is mode
@@ -176,14 +176,14 @@ UV_PYTHON_DOWNLOADS=never uv sync --python /usr/bin/python3
 
 # The service runs as an unprivileged user, so everything it executes must be
 # readable and traversable by it.
-chmod 755 /opt /opt/scarletcoin
-chmod -R a+rX /opt/scarletcoin
+chmod 755 /opt /opt/weed
+chmod -R a+rX /opt/weed
 
 # Check as the service user, not as root: this is the exact call OpenRC makes.
-su -s /bin/sh scarlet -c '/opt/scarletcoin/.venv/bin/scarlet-node --version'
+su -s /bin/sh weed -c '/opt/weed/.venv/bin/weed-node --version'
 ```
 
-That last command must print `scarletcoin 2.1.3`. If it does not, fix it now —
+That last command must print `weed 2.7.6`. If it does not, fix it now —
 the service will fail in exactly the same way, and `rc-service ... start` reports
 `[ ok ]` regardless, because it only means "the supervisor was launched".
 
@@ -192,8 +192,8 @@ instead of compiling Rust:
 
 ```sh
 apk add --no-cache py3-cryptography
-python3 -m venv --system-site-packages /opt/scarletcoin/.venv
-/opt/scarletcoin/.venv/bin/pip install --no-deps -e /opt/scarletcoin
+python3 -m venv --system-site-packages /opt/weed/.venv
+/opt/weed/.venv/bin/pip install --no-deps -e /opt/weed
 python3 -c "import cryptography; print(cryptography.__version__)"   # want >= 41
 ```
 
@@ -209,13 +209,13 @@ rc-update add chronyd default && rc-service chronyd start
 
 ```sh
 apk add --no-cache iptables ip6tables
-iptables -A INPUT -p tcp --dport 20333 -j ACCEPT   # peers
+iptables -A INPUT -p tcp --dport 28333 -j ACCEPT   # peers
 iptables -A INPUT -p tcp --dport 80    -j ACCEPT   # Caddy: ACME challenge
 iptables -A INPUT -p tcp --dport 443   -j ACCEPT   # Caddy: explorer
 rc-service iptables save && rc-update add iptables default
 ```
 
-Note what is *not* here: 20332 stays closed. If your provider has its own
+Note what is *not* here: 28332 stays closed. If your provider has its own
 firewall or security group, open the same three ports there too.
 
 ### 4. Run the node under OpenRC
@@ -224,29 +224,29 @@ Before installing the service, make sure the service user can run the binary —
 step 2 ends with exactly that check.
 
 ```sh
-cat > /etc/init.d/scarlet-node <<'EOF'
+cat > /etc/init.d/weed-node <<'EOF'
 #!/sbin/openrc-run
 
-name="scarlet-node"
-description="ScarletCoin node"
+name="weed-node"
+description="WEED node"
 
 : ${network:=mainnet}
-: ${datadir:=/var/lib/scarletcoin}
+: ${datadir:=/var/lib/weed}
 
-command="/opt/scarletcoin/.venv/bin/scarlet-node"
+command="/opt/weed/.venv/bin/weed-node"
 # --no-seeds: this node *is* the seed, so it has nothing to bootstrap from.
 # --rpc-advertise: tells wallets and other public nodes where to find this one,
 # so `--node public` in a fresh wallet can discover it.
 command_args="--network ${network} --datadir ${datadir}
-    --p2p-port 20333 --rpc-host 127.0.0.1 --rpc-port 20332 --rpc-public --no-seeds
-    --rpc-advertise https://scarletcoin.remotewire.net"
-command_user="scarlet:scarlet"
+    --p2p-port 28333 --rpc-host 127.0.0.1 --rpc-port 28332 --rpc-public --no-seeds
+    --rpc-advertise https://WEED public node"
+command_user="weed:weed"
 
 supervisor="supervise-daemon"
 respawn_delay=5
 respawn_max=0
-output_log="/var/log/scarletcoin/node.log"
-error_log="/var/log/scarletcoin/node.log"
+output_log="/var/log/weed/node.log"
+error_log="/var/log/weed/node.log"
 
 depend() {
     need net
@@ -254,27 +254,27 @@ depend() {
 }
 
 start_pre() {
-    checkpath -d -o scarlet:scarlet -m 0750 "${datadir}" /var/log/scarletcoin
+    checkpath -d -o weed:weed -m 0750 "${datadir}" /var/log/weed
 }
 EOF
-chmod +x /etc/init.d/scarlet-node
+chmod +x /etc/init.d/weed-node
 
-rc-update add scarlet-node default
-rc-service scarlet-node start
-tail -f /var/log/scarletcoin/node.log
+rc-update add weed-node default
+rc-service weed-node start
+tail -f /var/log/weed/node.log
 ```
 
 You are looking for these three lines:
 
 ```
-starting mainnet node at height 0 (/var/lib/scarletcoin/mainnet)
-listening for peers on 20333
-RPC and explorer listening on http://127.0.0.1:20332
+starting mainnet node at height 0 (/var/lib/weed/mainnet)
+listening for peers on 28333
+RPC and explorer listening on http://127.0.0.1:28332
 ```
 
 The node also prints how much room its chain takes up as it starts
 (`chain: height 41207, 6.71 MB of blocks (9.84 MB on disk)`), and
-`scarlet-node size` answers the same question at any time without touching the
+`weed-node size` answers the same question at any time without touching the
 running node.
 
 `supervise-daemon` restarts the node if it ever dies, and `respawn_max=0` means it
@@ -282,8 +282,8 @@ keeps trying forever. Rotate the log so it cannot fill the disk:
 
 ```sh
 apk add --no-cache logrotate
-cat > /etc/logrotate.d/scarletcoin <<'EOF'
-/var/log/scarletcoin/*.log {
+cat > /etc/logrotate.d/weed <<'EOF'
+/var/log/weed/*.log {
     weekly
     rotate 8
     compress
@@ -305,12 +305,12 @@ what lets someone else's wallet use your node, so Caddy passes `/rpc` through:
 
 ```caddyfile
 # /etc/caddy/Caddyfile
-scarletcoin.remotewire.net {
+WEED public node {
 	encode zstd gzip
 
 	# Wallets and explorers. The node itself decides what an anonymous caller
 	# may do: reads and sendrawtransaction yes, mining and control no.
-	reverse_proxy 127.0.0.1:20332
+	reverse_proxy 127.0.0.1:28332
 
 	header {
 		Strict-Transport-Security "max-age=31536000"
@@ -320,7 +320,7 @@ scarletcoin.remotewire.net {
 	}
 
 	log {
-		output file /var/log/caddy/scarletcoin.log
+		output file /var/log/caddy/weed.log
 	}
 }
 ```
@@ -334,7 +334,7 @@ the service and block the endpoint at the proxy instead:
 		respond "the RPC interface is not public" 404
 	}
 	handle {
-		reverse_proxy 127.0.0.1:20332
+		reverse_proxy 127.0.0.1:28332
 	}
 ```
 
@@ -363,43 +363,43 @@ address:
 
 ```sh
 # on your laptop
-uv run scarlet-wallet --network mainnet create
-uv run scarlet-wallet --network mainnet addresses
+uv run weed-wallet --network mainnet create
+uv run weed-wallet --network mainnet addresses
 ```
 
 ```sh
 # on the server, mining to that address; no keys involved
-cat > /etc/init.d/scarlet-miner <<'EOF'
+cat > /etc/init.d/weed-miner <<'EOF'
 #!/sbin/openrc-run
 
-name="scarlet-miner"
-description="ScarletCoin miner"
+name="weed-miner"
+description="WEED miner"
 
 : ${address:=S_your_address_here}
 : ${workers:=1}
 : ${max_rate:=}
 
-command="/opt/scarletcoin/.venv/bin/scarlet-miner"
-command_args="${address} --network mainnet --datadir /var/lib/scarletcoin
+command="/opt/weed/.venv/bin/weed-miner"
+command_args="${address} --network mainnet --datadir /var/lib/weed
     --workers ${workers} --quiet ${max_rate:+--max-rate ${max_rate}}"
-command_user="scarlet:scarlet"
+command_user="weed:weed"
 
 supervisor="supervise-daemon"
 respawn_delay=10
 respawn_max=0
-output_log="/var/log/scarletcoin/miner.log"
-error_log="/var/log/scarletcoin/miner.log"
+output_log="/var/log/weed/miner.log"
+error_log="/var/log/weed/miner.log"
 
 depend() {
-    need net scarlet-node
+    need net weed-node
 }
 EOF
-chmod +x /etc/init.d/scarlet-miner
-rc-update add scarlet-miner default
-rc-service scarlet-miner start
+chmod +x /etc/init.d/weed-miner
+rc-update add weed-miner default
+rc-service weed-miner start
 ```
 
-The miner reads the node's token from `/var/lib/scarletcoin/mainnet/rpc.token`,
+The miner reads the node's token from `/var/lib/weed/mainnet/rpc.token`,
 which is why it runs as the same user. Keep `workers` to one or two on a small
 VPS — the point is to keep the chain moving, and difficulty adapts to whatever
 hash rate shows up. Even one worker burns a full core; to leave the machine
@@ -413,15 +413,15 @@ else there.
 Run all of these from a *different* machine:
 
 ```sh
-dig +short scarletcoin.remotewire.net              # 45.126.126.139
-nc -vz scarletcoin.remotewire.net 20333            # open  (peers)
-nc -vz scarletcoin.remotewire.net 20332            # refused/filtered (correct!)
-curl -sI https://scarletcoin.remotewire.net | head -1
-curl -s  https://scarletcoin.remotewire.net/api/info
+dig +short WEED public node              # 45.126.126.139
+nc -vz WEED public node 28333            # open  (peers)
+nc -vz WEED public node 28332            # refused/filtered (correct!)
+curl -sI https://WEED public node | head -1
+curl -s  https://WEED public node/api/info
 
 # and the real test: a node somewhere else, with no configuration at all
-uv run scarlet-node --network mainnet --datadir /tmp/probe
-uv run scarlet-node info --network mainnet --datadir /tmp/probe
+uv run weed-node --network mainnet --datadir /tmp/probe
+uv run weed-node info --network mainnet --datadir /tmp/probe
 ```
 
 The probe should report `peers 1` or more and the same `genesis` as the server.
@@ -430,26 +430,26 @@ That is the whole point: users install the release and run one command.
 ### 8. Day-to-day operation
 
 ```sh
-rc-service scarlet-node status
-tail -f /var/log/scarletcoin/node.log
+rc-service weed-node status
+tail -f /var/log/weed/node.log
 
 # the control interface, from the server itself
-cd /opt/scarletcoin
-.venv/bin/scarlet-node info --network mainnet --datadir /var/lib/scarletcoin
-.venv/bin/scarlet-node rpc  --network mainnet --datadir /var/lib/scarletcoin getpeers
+cd /opt/weed
+.venv/bin/weed-node info --network mainnet --datadir /var/lib/weed
+.venv/bin/weed-node rpc  --network mainnet --datadir /var/lib/weed getpeers
 
 # or from your laptop, over SSH, without exposing anything
-ssh -L 20332:127.0.0.1:20332 root@45.126.126.139
+ssh -L 28332:127.0.0.1:28332 root@45.126.126.139
 ```
 
 Upgrades:
 
 ```sh
-cd /opt/scarletcoin && git pull && uv sync && rc-service scarlet-node restart
+cd /opt/weed && git pull && uv sync && rc-service weed-node restart
 ```
 
 The chain database survives restarts and upgrades. Back up
-`/var/lib/scarletcoin/mainnet/peers.json` if you like, but nothing there is
+`/var/lib/weed/mainnet/peers.json` if you like, but nothing there is
 irreplaceable — wallets are the only thing that cannot be re-downloaded, and
 yours is not on this machine.
 
@@ -460,7 +460,7 @@ yours is not on this machine.
 You need one host with a port other people can open a TCP connection to:
 
 * a small VPS is the easy option — a public IPv4 address and nothing else needed;
-* at home, forward TCP **20333** (mainnet) or **30333** (testnet) from your
+* at home, forward TCP **28333** (mainnet) or **30333** (testnet) from your
   router to the machine, and use a dynamic-DNS name since your address changes.
 
 Open the port in the firewall (see the
@@ -469,12 +469,12 @@ Open the port in the firewall (see the
 
 ```sh
 # firewalld (Fedora, RHEL)
-sudo firewall-cmd --permanent --add-port=20333/tcp && sudo firewall-cmd --reload
+sudo firewall-cmd --permanent --add-port=28333/tcp && sudo firewall-cmd --reload
 # ufw (Debian, Ubuntu)
-sudo ufw allow 20333/tcp
+sudo ufw allow 28333/tcp
 ```
 
-Do **not** open the RPC port (20332) to the internet — see
+Do **not** open the RPC port (28332) to the internet — see
 [Publishing your explorer](#publishing-your-explorer).
 
 ### 2. Keep the clock correct
@@ -491,39 +491,39 @@ sudo systemctl enable --now systemd-timesyncd   # or chronyd / ntpd
 ### 3. Run the node as a service
 
 ```ini
-# /etc/systemd/system/scarlet-node.service
+# /etc/systemd/system/weed-node.service
 [Unit]
-Description=ScarletCoin node
+Description=WEED node
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=scarlet
-WorkingDirectory=/opt/scarletcoin
-ExecStart=/usr/local/bin/uv run --project /opt/scarletcoin scarlet-node \
+User=weed
+WorkingDirectory=/opt/weed
+ExecStart=/usr/local/bin/uv run --project /opt/weed weed-node \
     --network mainnet \
-    --datadir /var/lib/scarletcoin \
-    --p2p-port 20333 \
-    --rpc-host 127.0.0.1 --rpc-port 20332
+    --datadir /var/lib/weed \
+    --p2p-port 28333 \
+    --rpc-host 127.0.0.1 --rpc-port 28332
 Restart=always
 RestartSec=5
-StateDirectory=scarletcoin
+StateDirectory=weed
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 ```sh
-sudo systemctl enable --now scarlet-node
-journalctl -u scarlet-node -f
+sudo systemctl enable --now weed-node
+journalctl -u weed-node -f
 ```
 
-You should see `listening for peers on 20333`. Verify from *outside* the machine
+You should see `listening for peers on 28333`. Verify from *outside* the machine
 that the port is really reachable:
 
 ```sh
-nc -vz your-host.example.org 20333
+nc -vz your-host.example.org 28333
 ```
 
 ### 4. Publish a host name
@@ -542,8 +542,8 @@ A dynamic-DNS hostname works exactly as well.
 A brand-new network is just the genesis block. Someone has to mine:
 
 ```sh
-uv run scarlet-wallet --network mainnet create
-uv run scarlet-miner --network mainnet S...your-address...
+uv run weed-wallet --network mainnet create
+uv run weed-miner --network mainnet S...your-address...
 ```
 
 The first blocks come at the easiest allowed difficulty (`0x1e0fffff`, about a
@@ -567,13 +567,13 @@ in `src/scarletcoin/core/params.py`, commit, and tag a release:
 for wallets and miners, and only need to get one client started — after that they
 find the rest through `getpublicnodes`.
 
-Now anyone who installs that version and runs `scarlet-node --network mainnet`
+Now anyone who installs that version and runs `weed-node --network mainnet`
 joins with **no configuration at all**.
 
 **Tell people a name.** Until they upgrade, users pass it themselves:
 
 ```sh
-scarlet-node --network mainnet --seed seed.example.org
+weed-node --network mainnet --seed seed.example.org
 ```
 
 Both put the seed in the node's address book. Everything else is learned by
@@ -586,16 +586,16 @@ If the build has seeds, this is the whole thing:
 
 ```sh
 uv sync
-uv run scarlet-node --network mainnet
+uv run weed-node --network mainnet
 ```
 
 The node resolves the seeds, connects, asks for more addresses, downloads the
 chain, and stays connected. If the build has no seeds, add one:
 
 ```sh
-uv run scarlet-node --network mainnet --seed seed.example.org
+uv run weed-node --network mainnet --seed seed.example.org
 # or a specific machine you were given:
-uv run scarlet-node --network mainnet --addnode 203.0.113.7:20333
+uv run weed-node --network mainnet --addnode 203.0.113.7:28333
 ```
 
 `--seed` expects a name whose records are all candidate peers; `--addnode` is one
@@ -605,8 +605,8 @@ and whatever it learns by gossip. Both may be repeated.
 Watch the progress:
 
 ```sh
-uv run scarlet-node info --network mainnet
-uv run scarlet-node rpc --network mainnet getpeers
+uv run weed-node info --network mainnet
+uv run weed-node rpc --network mainnet getpeers
 ```
 
 A node behind NAT that cannot accept inbound connections still works fine — it
@@ -678,7 +678,7 @@ proof of work wins**.
 network. These must match exactly, forever:
 
 ```sh
-uv run scarlet-node rpc --network mainnet getinfo
+uv run weed-node rpc --network mainnet getinfo
 ```
 
 ```json
@@ -692,23 +692,23 @@ new block propagates, but an older block cannot:
 
 ```sh
 # on each node
-uv run scarlet-node rpc --network mainnet getblockhash 1000
+uv run weed-node rpc --network mainnet getblockhash 1000
 ```
 
 A tiny script that checks a whole set of nodes:
 
 ```sh
 #!/bin/sh
-# usage: ./check-sync.sh http://node-a:20332 http://node-b:20332 ...
+# usage: ./check-sync.sh http://node-a:28332 http://node-b:28332 ...
 for url in "$@"; do
-  height=$(uv run scarlet-node rpc --network mainnet --rpc-url "$url" getblockcount)
+  height=$(uv run weed-node rpc --network mainnet --rpc-url "$url" getblockcount)
   settled=$((height - 6))
   printf '%-32s height=%-7s genesis=%.16s tip=%.16s settled(%s)=%.16s\n' \
     "$url" "$height" \
-    "$(uv run scarlet-node rpc --network mainnet --rpc-url "$url" getinfo | sed -n 's/.*"genesis": "\([^"]*\)".*/\1/p')" \
-    "$(uv run scarlet-node rpc --network mainnet --rpc-url "$url" getbestblockhash)" \
+    "$(uv run weed-node rpc --network mainnet --rpc-url "$url" getinfo | sed -n 's/.*"genesis": "\([^"]*\)".*/\1/p')" \
+    "$(uv run weed-node rpc --network mainnet --rpc-url "$url" getbestblockhash)" \
     "$settled" \
-    "$(uv run scarlet-node rpc --network mainnet --rpc-url "$url" getblockhash $settled)"
+    "$(uv run weed-node rpc --network mainnet --rpc-url "$url" getblockhash $settled)"
 done
 ```
 
@@ -728,14 +728,14 @@ glance whether your neighbours are ahead of you.
 ## Running a node properly
 
 * **Keep the port reachable.** A node that cannot accept connections is a
-  consumer of the network, not a contributor. Check with `nc -vz host 20333` from
+  consumer of the network, not a contributor. Check with `nc -vz host 28333` from
   somewhere else.
 * **Keep RPC private.** It binds to `127.0.0.1` by default and requires a bearer
   token, generated at start-up and written to `<datadir>/<network>/rpc.token`.
   Binding it to a public address without a token is refused outright.
 * **Back up the wallet, not the chain.** `wallet.json` holds your keys and cannot
   be recovered from anywhere. The chain database can always be downloaded again.
-* **Watch the log.** `journalctl -u scarlet-node -f`; `block … accepted at height
+* **Watch the log.** `journalctl -u weed-node -f`; `block … accepted at height
   N` lines are the heartbeat of a healthy node.
 * **Storage.** Blocks, the UTXO set and the indexes live in one SQLite file in
   WAL mode. Put it on a real disk, not a network share.
@@ -765,7 +765,7 @@ server {
     # ssl_certificate ...;
 
     location / {
-        proxy_pass http://127.0.0.1:20332;
+        proxy_pass http://127.0.0.1:28332;
         proxy_set_header Host $host;
     }
     location /rpc {          # never expose the control interface
@@ -777,7 +777,7 @@ server {
 For your own use, an SSH tunnel is simpler and safer:
 
 ```sh
-ssh -L 20332:127.0.0.1:20332 you@your-host   # then open http://127.0.0.1:20332
+ssh -L 28332:127.0.0.1:28332 you@your-host   # then open http://127.0.0.1:28332
 ```
 
 ## Letting other people's wallets use your node
@@ -788,11 +788,11 @@ trade-off.
 ### The proper way: everyone runs a node
 
 ```sh
-uv run scarlet-node --network mainnet      # joins through the seed, no config
-uv run scarlet-wallet-gui --network mainnet
+uv run weed-node --network mainnet      # joins through the seed, no config
+uv run weed-wallet-gui --network mainnet
 ```
 
-The wallet defaults to `http://127.0.0.1:20332` and picks up the local node's
+The wallet defaults to `http://127.0.0.1:28332` and picks up the local node's
 token automatically, so this needs no configuration at all. The wallet then
 trusts nobody: balances come from a chain the user validated themselves.
 
@@ -832,9 +832,9 @@ release, so a node that is not on that list has to be found some other way.
 `getpublicnodes` is that other way:
 
 ```sh
-scarlet-node --network mainnet --rpc-public \
-    --rpc-advertise https://scarletcoin.example.net \
-    --public-peer https://scarletcoin.remotewire.net
+weed-node --network mainnet --rpc-public \
+    --rpc-advertise https://weed.example.net \
+    --public-peer https://WEED public node
 ```
 
 * `--rpc-advertise` is the address *you* are reachable at. Without it your node
@@ -851,8 +851,8 @@ wallet in the network.
 Users point their wallet at it with no token, or simply let it ask:
 
 ```sh
-uv run scarlet-wallet     --network mainnet --node public info
-uv run scarlet-wallet-gui --network mainnet --node https://scarletcoin.remotewire.net
+uv run weed-wallet     --network mainnet --node public info
+uv run weed-wallet-gui --network mainnet --node https://WEED public node
 ```
 
 The chosen node is remembered in `<datadir>/<network>/node.json`, which the command
@@ -877,32 +877,32 @@ What you are accepting by running this:
 
 | Problem | Cause and fix |
 |---|---|
-| `peers 0`, nothing happens | No seed and no `--addnode`, or the seed is unreachable. Check with `nc -vz seed 20333`, then `scarlet-node rpc addpeer <host> <port>` to try one by hand |
+| `peers 0`, nothing happens | No seed and no `--addnode`, or the seed is unreachable. Check with `nc -vz seed 28333`, then `weed-node rpc addpeer <host> <port>` to try one by hand |
 | `cannot resolve seed …` | DNS problem, or a typo in the name |
 | Nobody connects *to* you | Port not forwarded, firewall closed, or you started with `--no-listen`. Cloud hosts also need the port opened in their own security group |
 | `this database belongs to a different network` | The datadir was created by another network or a modified build. Use a different `--datadir` |
 | `message is for a different network` in the log | A peer from another chain (or a port scan). Harmless |
 | Height stuck, peers connected | Give it the poll interval (up to five minutes) to re-ask; then check the log for rejected blocks, and check the clock |
 | `refusing blocks that are ahead of this machine's clock` | *Your* clock is behind by more than two hours, so every honest block looks invalid and the node cannot follow the network. Fix NTP; the node re-checks the blocks it held back once a minute and catches up on its own. `getinfo.warnings` reports this, and the wallet shows it in the status bar |
-| A transaction stays in the mempool while blocks are mined | The miner does not have it. Check with `scarlet-node rpc --rpc-url <miner> getmempool`. Nodes re-offer their pool every two minutes and on every reconnect, so it should heal by itself; to force it, rebroadcast the raw transaction straight at the mining node. Note that mempools are memory-only: if every node holding it restarts, the transaction is gone and has to be sent again |
+| A transaction stays in the mempool while blocks are mined | The miner does not have it. Check with `weed-node rpc --rpc-url <miner> getmempool`. Nodes re-offer their pool every two minutes and on every reconnect, so it should heal by itself; to force it, rebroadcast the raw transaction straight at the mining node. Note that mempools are memory-only: if every node holding it restarts, the transaction is gone and has to be sent again |
 | Your mined blocks are rejected | Usually a stale template or a wrong-network payout address. The error from `submitblock` says which rule failed |
-| Disk filling up | Check with `scarlet-node size`. Blocks are ~1 kB each on a quiet chain, but plan for growth; `scarlet-node prune --keep 5000` drops old bodies, and `--prune 5000` keeps doing it. A pruned node can no longer help a new one sync, so do not prune the seed |
+| Disk filling up | Check with `weed-node size`. Blocks are ~1 kB each on a quiet chain, but plan for growth; `weed-node prune --keep 5000` drops old bodies, and `--prune 5000` keeps doing it. A pruned node can no longer help a new one sync, so do not prune the seed |
 | `dig` returns an address that is not your server | The record is wrong, or your DNS provider is proxying it. A proxy cannot carry the peer-to-peer protocol: use a plain A record, or publish a second unproxied name for peers |
-| Explorer works over HTTPS but no peer ever connects | You proxied the wrong thing. Caddy serves 20332; peers need TCP 20333 open directly |
+| Explorer works over HTTPS but no peer ever connects | You proxied the wrong thing. Caddy serves 28332; peers need TCP 28333 open directly |
 | Caddy cannot get a certificate | Port 80 must be reachable and the DNS record must already point at the server |
 | On Alpine: `cryptography` tries to compile Rust | No musl wheel for your architecture. Use `apk add py3-cryptography` with a `--system-site-packages` venv |
 | The miner cannot authenticate | It must run as the user that owns `<datadir>/<network>/rpc.token`, or be given `--rpc-token` |
 | A remote wallet gets `401 unauthorised` | The node was not started with `--rpc-public`. Add it, or give that wallet the token |
 | A remote wallet gets `-32001 … needs the node's RPC token` | The method is not in the public set on purpose (peers, pruning, control). Use a local node for those |
 | A remote miner cannot get work | `getblocktemplate` is private unless the operator passed `--rpc-public-mining`. Give the miner the token, run it beside its own node, or add that flag |
-| A wallet cannot find any public node | Its release only knows the addresses compiled into it. Pass `--node <URL>` once, set `SCARLETCOIN_PUBLIC_NODES`, or ask an operator to list yours with `--public-peer` |
+| A wallet cannot find any public node | Its release only knows the addresses compiled into it. Pass `--node <URL>` once, set `WEED_PUBLIC_NODES`, or ask an operator to list yours with `--public-peer` |
 | `has been pruned by this node` from `getblock` | That node keeps only recent bodies. Ask one that keeps the whole chain |
 | Test nodes on your laptop keep joining the real network | Start them with `--no-seeds`, or they will find the seed and sync (and relay anything they mine) |
 | The seed node logs `connected` / `disconnected` once a second, peer numbers climbing | It is dialling its own published address. Fixed in the code (the address is remembered after the first attempt); also give the seed node `--no-seeds`, since it has nothing to bootstrap from. `getinfo.own_addresses` lists the addresses it knows are itself |
 | Caddy: `setting up custom log … permission denied` | `/var/log/caddy` is missing or not writable by Caddy's user: `install -d -m 0755 /var/log/caddy && chown -R caddy:caddy /var/log/caddy` |
 | `rc-service caddy restart` ends with `ERROR: caddy failed to stop` | The configuration check failed, so nothing was restarted. Fix the error it printed and try again; the old configuration is still what is running |
-| `supervise-daemon: failed to exec …/scarlet-node: Permission denied` | The service user cannot execute the launcher **or its interpreter**. Check `readlink -f .venv/bin/python3`: if it points inside `/root/.local/share/uv/`, uv used a Python only root can read — rebuild with `UV_PYTHON_DOWNLOADS=never uv sync --python /usr/bin/python3`. Otherwise it is directory permissions: `chmod 755 /opt /opt/scarletcoin && chmod -R a+rX /opt/scarletcoin`. Confirm with `su -s /bin/sh scarlet -c '/opt/scarletcoin/.venv/bin/scarlet-node --version'` |
-| `rc-service scarlet-node start` says `[ ok ]` but nothing runs | OpenRC only reports that the supervisor started. The real error is in `/var/log/scarletcoin/node.log` |
+| `supervise-daemon: failed to exec …/weed-node: Permission denied` | The service user cannot execute the launcher **or its interpreter**. Check `readlink -f .venv/bin/python3`: if it points inside `/root/.local/share/uv/`, uv used a Python only root can read — rebuild with `UV_PYTHON_DOWNLOADS=never uv sync --python /usr/bin/python3`. Otherwise it is directory permissions: `chmod 755 /opt /opt/weed && chmod -R a+rX /opt/weed`. Confirm with `su -s /bin/sh weed -c '/opt/weed/.venv/bin/weed-node --version'` |
+| `rc-service weed-node start` says `[ ok ]` but nothing runs | OpenRC only reports that the supervisor started. The real error is in `/var/log/weed/node.log` |
 | `failed to exec` and `/opt` is a separate mount | Check `mount | grep /opt` for `noexec`; if so, install somewhere else |
 
 ## Starting your own separate chain

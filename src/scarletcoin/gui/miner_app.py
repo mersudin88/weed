@@ -1,4 +1,4 @@
-"""``scarlet-miner-gui``: a Qt front end for the miner."""
+"""``weed-miner-gui``: a Qt front end for the miner."""
 
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ class MinerWindow(QtWidgets.QMainWindow):
         self._bridge: MinerBridge | None = None
         self._thread: QtCore.QThread | None = None
 
-        self.setWindowTitle(f"ScarletCoin miner - {network}")
+        self.setWindowTitle(f"WEED miner - {network}")
         self.resize(640, 480)
         node_menu = self.menuBar().addMenu("&Node")
         node_menu.addAction("&Connection...", self.change_node)
@@ -120,7 +120,7 @@ class MinerWindow(QtWidgets.QMainWindow):
         layout.setContentsMargins(18, 16, 18, 12)
         layout.setSpacing(12)
 
-        title = QtWidgets.QLabel("ScarletCoin miner")
+        title = QtWidgets.QLabel("WEED miner")
         title.setObjectName("title")
         layout.addWidget(title)
 
@@ -238,7 +238,7 @@ class MinerWindow(QtWidgets.QMainWindow):
             message = (
                 f"{info['network']}  ·  height {info['height']}"
                 f"  ·  difficulty {info['difficulty']:.6g}"
-                f"  ·  supply {format_amount(info['supply'])} SCT"
+                f"  ·  supply {format_amount(info['supply'])} WEED"
                 + (f"  ·  chain {chain}" if chain else "")
             )
         self.status.showMessage(message)
@@ -358,7 +358,7 @@ def _wallet_address(datadir: Path, network: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for ``scarlet-miner-gui``."""
+    """Entry point for ``weed-miner-gui``."""
     import multiprocessing
 
     # Pick the start method *before* freeze_support(): on Python 3.13+
@@ -371,7 +371,7 @@ def main(argv: list[str] | None = None) -> int:
     multiprocessing.freeze_support()
 
     parser = argparse.ArgumentParser(
-        prog="scarlet-miner-gui", description="ScarletCoin desktop miner."
+        prog="weed-miner-gui", description="WEED desktop miner."
     )
     parser.add_argument("address", nargs="?", default=None, help="payout address")
     add_common_gui_arguments(parser)
@@ -379,7 +379,7 @@ def main(argv: list[str] | None = None) -> int:
 
     application = QtWidgets.QApplication(sys.argv[:1])
     apply_theme(application)
-    application.setApplicationName(f"ScarletCoin miner {__version__}")
+    application.setApplicationName(f"WEED miner {__version__}")
 
     address = args.address or _wallet_address(args.datadir, args.network)
     settings, local_node = resolve_startup(args, for_mining=True)

@@ -445,10 +445,10 @@ def build_methods(node: Node) -> dict[str, Callable[..., object]]:
         """Create a frozen AuxPoW candidate for merged mining.
 
         Returns enough information for a Bitcoin pool/proxy to construct the
-        parent coinbase with the correct ScarletCoin commitment.
+        parent coinbase with the correct WEED commitment.
 
         Args:
-            address: The ScarletCoin address that will receive the block reward.
+            address: The WEED address that will receive the block reward.
         """
         if params.auxpow_chain_id == 0:
             raise RpcError("AuxPoW is not configured for this network")
@@ -491,7 +491,7 @@ def build_methods(node: Node) -> dict[str, Callable[..., object]]:
         except (ValueError, SerializationError, AuxPoWError) as exc:
             raise RpcError(f"cannot decode AuxPoW: {exc}", INVALID_PARAMS) from exc
 
-        # Reconstruct the full ScarletCoin block from the candidate and attach
+        # Reconstruct the full WEED block from the candidate and attach
         # the AuxPoW proof.
         block = candidate.build_block()
         block = block.with_auxpow(auxpow)
@@ -798,7 +798,7 @@ class RpcServer:
 
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.1"
-            server_version = f"scarletcoin/{__version__}"
+            server_version = f"weed/{__version__}"
 
             def log_message(self, format: str, *args: object) -> None:
                 logger.debug("%s - %s", self.address_string(), format % args)
@@ -911,55 +911,55 @@ def metrics_text(node: Node) -> str:
     peers = node.peers
     mempool = node.mempool
     lines = [
-        "# HELP scarletcoin_height Active chain height.",
-        "# TYPE scarletcoin_height gauge",
-        f"scarletcoin_height {chain.height}",
-        "# HELP scarletcoin_peers Connected peers.",
-        "# TYPE scarletcoin_peers gauge",
-        f"scarletcoin_peers {len(peers)}",
-        "# HELP scarletcoin_inbound_peers Inbound peer connections.",
-        "# TYPE scarletcoin_inbound_peers gauge",
-        f"scarletcoin_inbound_peers {sum(1 for p in peers if p.inbound)}",
-        "# HELP scarletcoin_mempool_transactions Unconfirmed transactions.",
-        "# TYPE scarletcoin_mempool_transactions gauge",
-        f"scarletcoin_mempool_transactions {len(mempool)}",
-        "# HELP scarletcoin_mempool_bytes Unconfirmed transaction bytes.",
-        "# TYPE scarletcoin_mempool_bytes gauge",
-        f"scarletcoin_mempool_bytes {mempool.total_bytes}",
-        "# HELP scarletcoin_utxo_count Unspent outputs.",
-        "# TYPE scarletcoin_utxo_count gauge",
-        f"scarletcoin_utxo_count {stats['utxo_count']}",
-        "# HELP scarletcoin_supply_scar Circulating supply in scar.",
-        "# TYPE scarletcoin_supply_scar gauge",
-        f"scarletcoin_supply_scar {stats['supply']}",
-        "# HELP scarletcoin_difficulty Current difficulty.",
-        "# TYPE scarletcoin_difficulty gauge",
-        f"scarletcoin_difficulty {stats['difficulty']:.4f}",
-        "# HELP scarletcoin_chain_bytes Serialised active-chain size.",
-        "# TYPE scarletcoin_chain_bytes gauge",
-        f"scarletcoin_chain_bytes {stats['chain_bytes']}",
-        "# HELP scarletcoin_disk_bytes On-disk database size.",
-        "# TYPE scarletcoin_disk_bytes gauge",
-        f"scarletcoin_disk_bytes {stats['disk_bytes']}",
-        "# HELP scarletcoin_uptime_seconds Process uptime.",
-        "# TYPE scarletcoin_uptime_seconds gauge",
-        f"scarletcoin_uptime_seconds {time.time() - node.started_at:.1f}",
+        "# HELP weed_height Active chain height.",
+        "# TYPE weed_height gauge",
+        f"weed_height {chain.height}",
+        "# HELP weed_peers Connected peers.",
+        "# TYPE weed_peers gauge",
+        f"weed_peers {len(peers)}",
+        "# HELP weed_inbound_peers Inbound peer connections.",
+        "# TYPE weed_inbound_peers gauge",
+        f"weed_inbound_peers {sum(1 for p in peers if p.inbound)}",
+        "# HELP weed_mempool_transactions Unconfirmed transactions.",
+        "# TYPE weed_mempool_transactions gauge",
+        f"weed_mempool_transactions {len(mempool)}",
+        "# HELP weed_mempool_bytes Unconfirmed transaction bytes.",
+        "# TYPE weed_mempool_bytes gauge",
+        f"weed_mempool_bytes {mempool.total_bytes}",
+        "# HELP weed_utxo_count Unspent outputs.",
+        "# TYPE weed_utxo_count gauge",
+        f"weed_utxo_count {stats['utxo_count']}",
+        "# HELP weed_supply_weed Circulating supply in scar.",
+        "# TYPE weed_supply_weed gauge",
+        f"weed_supply_weed {stats['supply']}",
+        "# HELP weed_difficulty Current difficulty.",
+        "# TYPE weed_difficulty gauge",
+        f"weed_difficulty {stats['difficulty']:.4f}",
+        "# HELP weed_chain_bytes Serialised active-chain size.",
+        "# TYPE weed_chain_bytes gauge",
+        f"weed_chain_bytes {stats['chain_bytes']}",
+        "# HELP weed_disk_bytes On-disk database size.",
+        "# TYPE weed_disk_bytes gauge",
+        f"weed_disk_bytes {stats['disk_bytes']}",
+        "# HELP weed_uptime_seconds Process uptime.",
+        "# TYPE weed_uptime_seconds gauge",
+        f"weed_uptime_seconds {time.time() - node.started_at:.1f}",
         # AuxPoW merged-mining metrics
-        "# HELP scarletcoin_auxpow_blocks_total AuxPoW blocks accepted.",
-        "# TYPE scarletcoin_auxpow_blocks_total counter",
-        f"scarletcoin_auxpow_blocks_total {node.auxpow_blocks_total}",
-        "# HELP scarletcoin_auxpow_rejections_total AuxPoW blocks rejected.",
-        "# TYPE scarletcoin_auxpow_rejections_total counter",
-        f"scarletcoin_auxpow_rejections_total {node.auxpow_rejections_total}",
-        "# HELP scarletcoin_auxpow_submissions_total AuxPoW candidates created.",
-        "# TYPE scarletcoin_auxpow_submissions_total counter",
-        f"scarletcoin_auxpow_submissions_total {node.auxpow_submissions_total}",
-        "# HELP scarletcoin_auxpow_templates_created_total AuxPoW templates served.",
-        "# TYPE scarletcoin_auxpow_templates_created_total counter",
-        f"scarletcoin_auxpow_templates_created_total {node.auxpow_templates_created_total}",
-        "# HELP scarletcoin_auxpow_candidates Cached AuxPoW candidates, one per"
+        "# HELP weed_auxpow_blocks_total AuxPoW blocks accepted.",
+        "# TYPE weed_auxpow_blocks_total counter",
+        f"weed_auxpow_blocks_total {node.auxpow_blocks_total}",
+        "# HELP weed_auxpow_rejections_total AuxPoW blocks rejected.",
+        "# TYPE weed_auxpow_rejections_total counter",
+        f"weed_auxpow_rejections_total {node.auxpow_rejections_total}",
+        "# HELP weed_auxpow_submissions_total AuxPoW candidates created.",
+        "# TYPE weed_auxpow_submissions_total counter",
+        f"weed_auxpow_submissions_total {node.auxpow_submissions_total}",
+        "# HELP weed_auxpow_templates_created_total AuxPoW templates served.",
+        "# TYPE weed_auxpow_templates_created_total counter",
+        f"weed_auxpow_templates_created_total {node.auxpow_templates_created_total}",
+        "# HELP weed_auxpow_candidates Cached AuxPoW candidates, one per"
         " miner when a bridge pays each miner its own address.",
-        "# TYPE scarletcoin_auxpow_candidates gauge",
-        f"scarletcoin_auxpow_candidates {node.aux_candidate_count}",
+        "# TYPE weed_auxpow_candidates gauge",
+        f"weed_auxpow_candidates {node.aux_candidate_count}",
     ]
     return "\n".join(lines) + "\n"

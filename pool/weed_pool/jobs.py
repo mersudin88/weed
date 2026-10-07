@@ -2,10 +2,10 @@
 
 Orchestrates the flow:
 
-1. fetch a ScarletCoin AuxPoW candidate (``createauxblock``),
+1. fetch a WEED AuxPoW candidate (``createauxblock``),
 2. fetch a parent-chain block template (Bitcoin Core, or the simulated chain),
 3. build the merged parent coinbase and the Stratum job,
-4. check submitted shares and, when one meets the ScarletCoin target,
+4. check submitted shares and, when one meets the WEED target,
    assemble an AuxPoW proof and submit it (``submitauxblock``).
 
 Byte order: every 32-byte hash handed to a miner, and every hash read back
@@ -40,7 +40,7 @@ __all__ = [
     "JobManager",
     "ParentChainClient",
     "ParentTemplate",
-    "ScarletTemplate",
+    "WeedTemplate",
     "ShareResult",
 ]
 
@@ -62,8 +62,8 @@ class ParentChainClient(Protocol):
 
     Two implementations exist:
 
-    * :class:`~pool.scarlet_pool.server.SimulatedParentChain` — a fake chain
-      used for testing and for mining ScarletCoin on its own.
+    * :class:`~pool.weed_pool.server.SimulatedParentChain` — a fake chain
+      used for testing and for mining WEED on its own.
     * ``BitcoinCoreClient`` — talks to a real ``bitcoind`` for genuine BTC
       merged mining (not implemented yet).
     """
@@ -95,11 +95,11 @@ class ParentTemplate:
 
 
 @dataclass(frozen=True)
-class ScarletTemplate:
-    """A frozen ScarletCoin AuxPoW candidate."""
+class WeedTemplate:
+    """A frozen WEED AuxPoW candidate."""
 
     aux_hash: str
-    """ScarletCoin block hash, display order."""
+    """WEED block hash, display order."""
     target: int
     """Integer target the parent proof must not exceed."""
     chain_id: int
@@ -116,7 +116,7 @@ class ShareResult:
     reason: str = ""
     hash_hex: str = ""
     """Parent header hash, display order."""
-    meets_sct_target: bool = False
+    meets_weed_target: bool = False
     meets_btc_target: bool = False
 
 
@@ -129,7 +129,7 @@ class _ActiveJob:
 
     job_id: str
     parent: ParentTemplate
-    scarlet: ScarletTemplate
+    weed: WeedTemplate
     coinbase: ParentCoinbase
     merkle_branches: list[str]
     """Merkle branch in internal byte order, as hex."""
@@ -146,7 +146,7 @@ class JobManager:
         self,
         *,
         bitcoin: ParentChainClient,
-        scarlet: RpcClient,
+        weed: RpcClient,
         payout_address: str,
         chain_id: int,
         share_difficulty: float | None = None,
@@ -154,7 +154,7 @@ class JobManager:
         coinbase_builder: CoinbaseBuilder | None = None,
     ) -> None:
         self._btc = bitcoin
-        self._scarlet = scarlet
+        self._weed = weed
         self._payout_address = payout_address
         self._chain_id = chain_id
         self._coinbase_builder = coinbase_builder or CoinbaseBuilder()
@@ -176,9 +176,9 @@ class JobManager:
         # Stats
         self.shares_accepted: int = 0
         self.shares_rejected: int = 0
-        self.sct_blocks_found: int = 0
-        self.sct_blocks_accepted: int = 0
-        self.sct_blocks_rejected: int = 0
+        self.weed_blocks_found: int = 0
+        self.weed_blocks_accepted: int = 0
+        self.weed_blocks_rejected: int = 0
 
     # ── share target ───────────────────────────────────────────────────
 
@@ -198,7 +198,7 @@ class JobManager:
         job = self._current
         if job is None:
             return _DIFF1_TARGET
-        return max(1, job.scarlet.target * DEFAULT_SHARE_EASE)
+        return max(1, job.weed.target * DEFAULT_SHARE_EASE)
 
     @share_target.setter
     def share_target(self, value: int) -> None:
@@ -223,31 +223,31 @@ class JobManager:
         telling them to drop everything older.
         """
         address = payout_address or self._payout_address
-        scarlet_raw = self._scarlet.call("createauxblock", address)
-        if not isinstance(scarlet_raw, dict):
-            raise RuntimeError(f"unexpected createauxblock reply: {scarlet_raw!r}")
+        weed_raw = self._weed.call("createauxblock", address)
+        if not isinstance(weed_raw, dict):
+            raise RuntimeError(f"unexpected createauxblock reply: {weed_raw!r}")
 
         parent = self._btc.get_template()
 
-        scarlet = ScarletTemplate(
-            aux_hash=str(scarlet_raw["hash"]),
-            target=int(str(scarlet_raw["target"]), 16),
-            chain_id=int(scarlet_raw["chainid"]),
-            nonce=int(scarlet_raw["nonce"]),
-            height=int(scarlet_raw["height"]),
+        weed = WeedTemplate(
+            aux_hash=str(weed_raw["hash"]),
+            target=int(str(weed_raw["target"]), 16),
+            chain_id=int(weed_raw["chainid"]),
+            nonce=int(weed_raw["nonce"]),
+            height=int(weed_raw["height"]),
         )
 
         # A pool pointed at the wrong network would build proofs the node
         # rejects; fail loudly instead of silently burning hashpower.
-        if self._chain_id and scarlet.chain_id != self._chain_id:
+        if self._chain_id and weed.chain_id != self._chain_id:
             raise RuntimeError(
-                f"ScarletCoin node reports chain id {scarlet.chain_id}, "
+                f"WEED node reports chain id {weed.chain_id}, "
                 f"but this pool was started for chain id {self._chain_id}"
             )
 
         # The AuxPoW commitment goes into the parent coinbase's coinbase_data.
-        aux_hash_internal = bytes.fromhex(scarlet.aux_hash)[::-1]
-        commitment = build_auxpow_commitment(aux_hash_internal, tree_size=1, nonce=scarlet.nonce)
+        aux_hash_internal = bytes.fromhex(weed.aux_hash)[::-1]
+        commitment = build_auxpow_commitment(aux_hash_internal, tree_size=1, nonce=weed.nonce)
 
         coinbase = self._coinbase_builder.build(
             coinbase_value=parent.coinbase_value,
@@ -265,7 +265,7 @@ class JobManager:
         self._current = _ActiveJob(
             job_id=f"{self._job_counter:08x}",
             parent=parent,
-            scarlet=scarlet,
+            weed=weed,
             coinbase=coinbase,
             merkle_branches=branches,
             created=time.time(),
@@ -329,14 +329,14 @@ class JobManager:
 
         self.shares_accepted += 1
         result = ShareResult(accepted=True, hash_hex=hash_hex)
-        if hash_int <= job.scarlet.target:
-            result.meets_sct_target = True
-            self.sct_blocks_found += 1
+        if hash_int <= job.weed.target:
+            result.meets_weed_target = True
+            self.weed_blocks_found += 1
         if hash_int <= job.parent.target:
             result.meets_btc_target = True
         return result
 
-    def submit_sct_block(
+    def submit_weed_block(
         self,
         job: _ActiveJob,
         extranonce1_hex: str,
@@ -344,7 +344,7 @@ class JobManager:
         ntime: int,
         nonce: int,
     ) -> dict | None:
-        """Assemble and submit an AuxPoW proof for a share that met the SCT target."""
+        """Assemble and submit an AuxPoW proof for a share that met the WEED target."""
         header_bytes = self._parent_header(job, extranonce1_hex, extranonce2_hex, ntime, nonce)
 
         parts = (
@@ -357,7 +357,7 @@ class JobManager:
         try:
             parent_coinbase_tx = parse_coinbase_body(body)
         except Exception:
-            self.sct_blocks_rejected += 1
+            self.weed_blocks_rejected += 1
             return None
 
         auxpow = AuxPoW(
@@ -370,17 +370,17 @@ class JobManager:
         )
 
         try:
-            result = self._scarlet.call(
-                "submitauxblock", job.scarlet.aux_hash, auxpow.serialize().hex()
+            result = self._weed.call(
+                "submitauxblock", job.weed.aux_hash, auxpow.serialize().hex()
             )
         except RpcClientError as exc:
             # Routine: the tip moved between mining this job and submitting it,
             # so the node no longer holds the candidate.  Report it instead of
             # letting it escape, which would drop the miner's connection.
-            self.sct_blocks_rejected += 1
+            self.weed_blocks_rejected += 1
             return {"status": "rejected", "reason": str(exc)}
         if isinstance(result, dict) and result.get("status") == "connected":
-            self.sct_blocks_accepted += 1
+            self.weed_blocks_accepted += 1
         else:
-            self.sct_blocks_rejected += 1
+            self.weed_blocks_rejected += 1
         return result

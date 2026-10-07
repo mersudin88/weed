@@ -98,10 +98,10 @@ QMenu::item:selected, QMenuBar::item:selected { background: #3a2429; }
 
 
 def apply_theme(app: QtWidgets.QApplication) -> None:
-    """Apply the ScarletCoin look to a Qt application."""
+    """Apply the WEED look to a Qt application."""
     app.setStyle("Fusion")
     app.setStyleSheet(STYLESHEET)
-    app.setApplicationName("ScarletCoin")
+    app.setApplicationName("WEED")
 
 
 def monospace() -> QtGui.QFont:
@@ -245,7 +245,7 @@ class ConnectionSettings:
     """Where a desktop application should look for a node.
 
     Saved in ``<datadir>/<network>/node.json`` — the same file the command line
-    tools read — so a node chosen in the wallet is also the one ``scarlet-wallet``
+    tools read — so a node chosen in the wallet is also the one ``weed-wallet``
     uses in a terminal. Command line options always win over the saved value.
     """
 
@@ -322,7 +322,7 @@ class NodeDialog(QtWidgets.QDialog):
 
         form = QtWidgets.QFormLayout()
         self.url_edit = QtWidgets.QLineEdit(self.settings.url)
-        self.url_edit.setPlaceholderText("http://127.0.0.1:20332")
+        self.url_edit.setPlaceholderText("http://127.0.0.1:28332")
         form.addRow("Node URL", self.url_edit)
         self.token_edit = QtWidgets.QLineEdit(self.settings.token)
         self.token_edit.setPlaceholderText("only for your own node")
@@ -426,7 +426,7 @@ def start_node_with_progress(
         network: Which network the node should join.
         datadir: Where its chain lives.
         rpc_port: Bind the RPC server here instead of the network default.
-        extra: Further ``scarlet-node run`` options, such as ``--rpc-public`` or
+        extra: Further ``weed-node run`` options, such as ``--rpc-public`` or
             ``--prune``, as produced by :meth:`LocalNodeDialog.extra_arguments`.
 
     Returns:
@@ -434,7 +434,7 @@ def start_node_with_progress(
         which case the failure has already been reported).
     """
     dialog = QtWidgets.QProgressDialog(f"Starting a {network} node...", "Cancel", 0, 0, parent)
-    dialog.setWindowTitle("ScarletCoin")
+    dialog.setWindowTitle("WEED")
     dialog.setWindowModality(QtCore.Qt.WindowModal)
     dialog.setMinimumDuration(0)
     dialog.setAutoClose(False)
@@ -670,7 +670,7 @@ class LocalNodeDialog(QtWidgets.QDialog):
     # ----------------------------------------------------------------- the answer
 
     def extra_arguments(self) -> tuple[str, ...]:
-        """The ``scarlet-node run`` options this dialog's answers translate to."""
+        """The ``weed-node run`` options this dialog's answers translate to."""
         extra: list[str] = []
         if self.prune_box.isChecked():
             extra += ["--prune", str(self.keep_spin.value())]
@@ -717,7 +717,7 @@ class PublicNodeDialog(QtWidgets.QDialog):
         layout.setSpacing(10)
 
         hint = QtWidgets.QLabel(
-            "A public node lets you use ScarletCoin without downloading the chain. "
+            "A public node lets you use WEED without downloading the chain. "
             "You are trusting its view of the network, so prefer one at the same "
             "height as the others — or run your own."
             + (
@@ -876,7 +876,7 @@ class StartupDialog(QtWidgets.QDialog):
         for_mining: bool = False,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("ScarletCoin")
+        self.setWindowTitle("WEED")
         self.setMinimumWidth(560)
         self.answer: str | None = None
 
@@ -1085,8 +1085,8 @@ def resolve_startup(
         from scarletcoin import __version__ as current
 
         logging.getLogger(__name__).warning(
-            "ScarletCoin %s is available (you are running %s)."
-            " Upgrade with: pip install --upgrade scarletcoin",
+            "WEED %s is available (you are running %s)."
+            " Upgrade with: pip install --upgrade weed",
             latest,
             current,
         )

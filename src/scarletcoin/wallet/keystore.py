@@ -181,7 +181,7 @@ class Keystore:
         except (OSError, json.JSONDecodeError) as exc:
             raise WalletError(f"cannot read {path}: {exc}") from exc
         if not isinstance(raw, dict) or raw.get("version") not in (1, WALLET_VERSION):
-            raise WalletError(f"{path} is not a version 1 or {WALLET_VERSION} ScarletCoin wallet")
+            raise WalletError(f"{path} is not a version 1 or {WALLET_VERSION} WEED wallet")
         try:
             params = get_params(str(raw["network"]))
         except KeyError as exc:

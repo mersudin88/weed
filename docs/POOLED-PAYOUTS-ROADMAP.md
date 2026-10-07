@@ -109,7 +109,7 @@ has capital to insure against variance.
   `core/params.py`). Paying before maturity risks paying coins that a reorg
   removes. Wait for maturity.
 - Batch: one transaction with many outputs, paid when an address's `owed`
-  exceeds a threshold (e.g. 1 SCT) or on a schedule.
+  exceeds a threshold (e.g. 1 WEED) or on a schedule.
 - Fee: keep the payout transaction's fee below the sum of what is owed, or the
   pool pays to give money away.
 - After sending, move `owed` to `paid`, and store the txid for reconciliation.

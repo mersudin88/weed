@@ -1,6 +1,6 @@
-"""Generate golden fixtures for the ScarletCoin web wallet's test suite.
+"""Generate golden fixtures for the WEED web wallet's test suite.
 
-Run from the ScarletCoin checkout (needs the ``scarletcoin`` package):
+Run from the WEED checkout (needs the ``scarletcoin`` package):
 
     uv run python tools/generate_web_fixtures.py
 
@@ -44,7 +44,7 @@ def main() -> None:
     pub2 = key2.public_key()
     pub3 = key3.public_key()
 
-    digest = hash256(b"ScarletCoin golden fixture")
+    digest = hash256(b"WEED golden fixture")
 
     coin1 = (OutPoint(bytes(range(1, 33)), 0), Coin(50 * COIN, 0, pub1.hash160(), 100, False))
     coin2 = (OutPoint(bytes(range(33, 65)), 1), Coin(25 * COIN, 0, pub2.hash160(), 101, False))

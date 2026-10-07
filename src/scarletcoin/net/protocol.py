@@ -1,4 +1,4 @@
-"""The ScarletCoin peer-to-peer wire protocol.
+"""The WEED peer-to-peer wire protocol.
 
 Every message is wrapped in the same envelope::
 

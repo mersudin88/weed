@@ -1,7 +1,7 @@
-# AuxPoW — Merged Mining for ScarletCoin
+# AuxPoW — Merged Mining for WEED
 
-ScarletCoin supports **Namecoin-style AuxPoW**, so an existing SHA-256 ASIC
-miner can produce ScarletCoin blocks while hashing the 80-byte headers it
+WEED supports **Namecoin-style AuxPoW**, so an existing SHA-256 ASIC
+miner can produce WEED blocks while hashing the 80-byte headers it
 already knows how to hash.
 
 ## How it works
@@ -15,23 +15,23 @@ already knows how to hash.
                │
                │ same nonce, two targets
                ▼
-   SCT AuxPoW proof  (when hash ≤ SCT target)
+   WEED AuxPoW proof  (when hash ≤ WEED target)
 ```
 
 The ASIC does exactly what it always does — hashes an 80-byte header. The pool
-puts a ScarletCoin **commitment** into the parent coinbase before handing the
-job out, and when a nonce's hash meets the ScarletCoin target it assembles an
-**AuxPoW proof** and submits it to a ScarletCoin node.
+puts a WEED **commitment** into the parent coinbase before handing the
+job out, and when a nonce's hash meets the WEED target it assembles an
+**AuxPoW proof** and submits it to a WEED node.
 
 ### What "parent" means here
 
-The parent coinbase is validated as an ordinary ScarletCoin
+The parent coinbase is validated as an ordinary WEED
 :class:`~scarletcoin.core.transaction.Transaction`, and the commitment lives in
 that transaction's **`coinbase_data`** field. It is *not* a Bitcoin-format
 coinbase, so a block taken from a real Bitcoin node cannot be used as a parent
 proof by this implementation. The parent header is therefore supplied by the
 pool (a "simulated parent chain") — the ASIC cannot tell the difference, and
-ScarletCoin never inspects the parent chain's state, but no BTC is mined.
+WEED never inspects the parent chain's state, but no BTC is mined.
 
 Supporting a real Bitcoin parent would mean adding a Bitcoin-format coinbase
 parser to the validation path.
@@ -43,7 +43,7 @@ the Namecoin convention:
 
 ```
 fa be 6d 6d          merged-mining magic marker (4 bytes)
-⟨aux_merkle_root⟩    ScarletCoin commitment root (32 bytes)
+⟨aux_merkle_root⟩    WEED commitment root (32 bytes)
 ⟨tree_size⟩          auxiliary tree size, uint32 LE (4 bytes)
 ⟨nonce⟩              commitment nonce, uint32 LE (4 bytes)
 ```
@@ -51,7 +51,7 @@ fa be 6d 6d          merged-mining magic marker (4 bytes)
 `coinbase_data` always begins with the block height as a uint32 LE, so in
 practice it looks like `height ‖ extranonces ‖ commitment`.
 
-For a single auxiliary chain (only ScarletCoin) the tree has one leaf, so:
+For a single auxiliary chain (only WEED) the tree has one leaf, so:
 
 - `tree_size = 1`
 - `aux_merkle_branch = []` (empty)
@@ -59,18 +59,18 @@ For a single auxiliary chain (only ScarletCoin) the tree has one leaf, so:
 
 ## Consensus validation
 
-A ScarletCoin node validates an AuxPoW block by proving seven things:
+A WEED node validates an AuxPoW block by proving seven things:
 
 1. **Structural** — all branches ≤ 30 levels, all hashes 32 bytes, parent header is 80 bytes
-2. **Aux block hash** — the ScarletCoin block hash itself (the 80-byte SHA-256d header)
+2. **Aux block hash** — the WEED block hash itself (the 80-byte SHA-256d header)
 3. **Aux Merkle root** — the block hash, passed through the auxiliary Merkle branch, reaches `aux_merkle_root`
 4. **Commitment present** — exactly one `fa be 6d 6d` marker in the parent coinbase, with correct root
 5. **Deterministic index** — the `aux_chain_index` matches `get_expected_index(nonce, chain_id, tree_height)`
 6. **Coinbase Merkle proof** — the parent coinbase's hash, passed through the coinbase Merkle branch, reaches the parent block's `merkle_root`
-7. **Parent PoW** — `SHA256d(parent_header) ≤ ScarletCoin target`
+7. **Parent PoW** — `SHA256d(parent_header) ≤ WEED target`
 
-The key rule: **the parent header's hash is the proof of work for ScarletCoin.**
-The ScarletCoin header's own `nonce` field is irrelevant for AuxPoW blocks.
+The key rule: **the parent header's hash is the proof of work for WEED.**
+The WEED header's own `nonce` field is irrelevant for AuxPoW blocks.
 
 Because the parent header is not checked against any parent-chain state, the
 parent coinbase's output is never spendable. Only the commitment inside it
@@ -100,7 +100,7 @@ Creates a frozen AuxPoW candidate. Returns:
 
 ```json
 {
-  "hash": "<scarlet-block-hash>",
+  "hash": "<weed-block-hash>",
   "chainid": 1,
   "target": "<64-char-target>",
   "bits": "0x...",
@@ -119,7 +119,7 @@ Submits a complete AuxPoW proof. Returns the block submission result with `statu
 
 ## Block serialization
 
-A ScarletCoin block wire format appends the AuxPoW after transactions:
+A WEED block wire format appends the AuxPoW after transactions:
 
 ```
 [80-byte header]
@@ -128,7 +128,7 @@ A ScarletCoin block wire format appends the AuxPoW after transactions:
 [if marker=0x01: varbytes(AuxPoW)]
 ```
 
-The **ScarletCoin block hash is always the SHA-256d of the 80-byte header only** — the AuxPoW payload does not change the block hash.
+The **WEED block hash is always the SHA-256d of the 80-byte header only** — the AuxPoW payload does not change the block hash.
 
 ## Deterministic index formula
 
@@ -149,7 +149,7 @@ For `aux_tree_height = 0` (single chain), the result is always 0.
 - Maximum Merkle branch depth: 30 levels
 - Coinbase data must contain exactly one commitment marker — duplicate markers cause rejection
 - Tree size must be a power of two
-- Nonce hash must not exceed the ScarletCoin target
+- Nonce hash must not exceed the WEED target
 - The parent coinbase MUST be a coinbase transaction (null outpoint)
 - All consensus rules (UTXO, signatures, subsidy, timestamp, difficulty) still apply
 
@@ -157,4 +157,4 @@ For `aux_tree_height = 0` (single chain), the result is always 0.
 
 - Namecoin AuxPoW implementation: https://github.com/namecoin/namecoin-core/blob/master/src/auxpow.cpp
 - Namecoin merged-mining documentation: https://github.com/vinced/namecoin/blob/master/doc/README_merged-mining.md
-- ScarletCoin repository: https://github.com/alessio-ds/ScarletCoin
+- WEED repository: https://github.com/alessio-ds/WEED

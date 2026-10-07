@@ -1290,7 +1290,7 @@ def prune_database(
     """Prune a chain database that no node currently has open.
 
     The offline counterpart of :meth:`Blockchain.prune`, used by
-    ``scarlet-node prune`` and by the desktop applications before they start a
+    ``weed-node prune`` and by the desktop applications before they start a
     node.  Opening the database read-write while a node is running would fight
     that node for the write lock, so callers check first.
 

@@ -1,6 +1,6 @@
-# ScarletCoin throughput benchmark
+# WEED throughput benchmark
 
-This report measures where ScarletCoin actually breaks. It is the result of a
+This report measures where WEED actually breaks. It is the result of a
 load test run against a real node on the author's machine — every number below
 is measured, not extrapolated. The goal was to answer one question: **is there a
 hard throughput limit, and if so, where does it come from?**
@@ -19,7 +19,7 @@ hard throughput limit, and if so, where does it come from?**
 | | |
 |---|---|---|
 | Machine | single consumer desktop, x86-64, Linux |
-| Runtime | CPython 3.14, ScarletCoin v2.2.4 |
+| Runtime | CPython 3.14, WEED v2.2.4 |
 | Network under test | `regtest` (instant mining, 10 s target spacing) |
 | Node | one full node, `--log-level error` to keep logging off the hot path |
 | Client | one wallet process speaking JSON-RPC over localhost |
@@ -138,7 +138,7 @@ achieves on one machine. Each layer can be lifted independently:
 * **Client**: multiprocessing signing already removes the wallet as a
   bottleneck; ~2 860 tx/s is a floor for how much load one machine can generate.
 
-*Last run: August 2026 against ScarletCoin v2.2.4. The modest 6 B/tx size
+*Last run: August 2026 against WEED v2.2.4. The modest 6 B/tx size
 increase (174 B → 180 B, from the v2.2.0 transaction format changes — P2SH,
 RBF, HD wallets) costs ~3 tx/s sustained, a 3% regression that is purely a
 consensus constant and not a performance defect.*

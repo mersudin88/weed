@@ -96,23 +96,25 @@ class TestNormaliseUrl:
 
 
 class TestCandidates:
-    def test_the_release_knows_where_the_public_mainnet_node_is(self):
+    def test_release_has_no_hardcoded_public_mainnet_node(self):
         urls = [node.url for node in directory.candidates("mainnet")]
-        assert "https://scarletcoin.remotewire.net" in urls
-        assert MAINNET.public_nodes
+        assert MAINNET.public_nodes == ()
+        assert "https://scarletcoin.remotewire.net" not in urls
 
     def test_a_typed_address_is_tried_before_the_built_in_ones(self, tmp_path):
         found = directory.candidates("mainnet", tmp_path, extra=("mine.example",))
         assert found[0].url == "https://mine.example"
         assert found[0].source == "typed"
 
-    def test_saved_nodes_come_before_the_built_in_ones(self, tmp_path):
+    def test_saved_nodes_are_returned_when_no_built_in_nodes_exist(self, tmp_path):
         directory.remember_node(tmp_path, "mainnet", "mine.example")
-        sources = [node.source for node in directory.candidates("mainnet", tmp_path)]
-        assert sources.index("saved") < sources.index("built-in")
+        found = directory.candidates("mainnet", tmp_path)
+        assert [(node.url, node.source) for node in found] == [
+            ("https://mine.example", "saved")
+        ]
 
     def test_the_environment_can_add_nodes(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("SCARLETCOIN_PUBLIC_NODES", "one.example,two.example")
+        monkeypatch.setenv("WEED_PUBLIC_NODES", "one.example,two.example")
         urls = [node.url for node in directory.candidates("regtest", tmp_path)]
         assert urls == ["https://one.example", "https://two.example"]
 
@@ -202,7 +204,7 @@ class TestDiscovery:
     def test_a_public_node_passes_on_the_ones_it_knows(self, public_node, tmp_path, monkeypatch):
         node, server = public_node
         assert node.public_nodes() == ["https://public.example", "https://friend.example"]
-        monkeypatch.setenv("SCARLETCOIN_PUBLIC_NODES", server.url)
+        monkeypatch.setenv("WEED_PUBLIC_NODES", server.url)
         found = directory.discover("regtest", tmp_path, timeout=4.0)
         urls = [status.url for status in found]
         assert server.url in urls
@@ -213,13 +215,13 @@ class TestDiscovery:
 
     def test_discovery_can_be_turned_off(self, public_node, tmp_path, monkeypatch):
         _, server = public_node
-        monkeypatch.setenv("SCARLETCOIN_PUBLIC_NODES", server.url)
+        monkeypatch.setenv("WEED_PUBLIC_NODES", server.url)
         found = directory.discover("regtest", tmp_path, timeout=4.0, follow=False)
         assert [status.url for status in found] == [server.url]
 
     def test_a_private_node_is_not_asked_for_referrals(self, rpc, tmp_path, monkeypatch):
         _, server, _ = rpc
-        monkeypatch.setenv("SCARLETCOIN_PUBLIC_NODES", server.url)
+        monkeypatch.setenv("WEED_PUBLIC_NODES", server.url)
         found = directory.discover("regtest", tmp_path, timeout=4.0)
         assert [status.url for status in found] == [server.url]
         assert found[0].needs_token
@@ -259,8 +261,8 @@ class TestPublicRpcSurface:
 
         with urllib.request.urlopen(f"{server.url}/metrics", timeout=10.0) as response:
             body = response.read().decode("utf-8")
-        assert "scarletcoin_height" in body
-        assert "scarletcoin_peers" in body
+        assert "weed_height" in body
+        assert "weed_peers" in body
         assert response.headers["Content-Type"].startswith("text/plain")
 
     def test_metrics_report_how_many_aux_candidates_are_cached(self, rpc, key):
@@ -282,7 +284,7 @@ class TestPublicRpcSurface:
         with urllib.request.urlopen(f"{server.url}/metrics", timeout=10.0) as response:
             body = response.read().decode("utf-8")
         line = next(
-            ln for ln in body.splitlines() if ln.startswith("scarletcoin_auxpow_candidates ")
+            ln for ln in body.splitlines() if ln.startswith("weed_auxpow_candidates ")
         )
         assert int(line.rsplit(" ", 1)[1]) == node.aux_candidate_count
 
@@ -433,13 +435,13 @@ class TestResolveConnection:
             resolve_connection(_args(tmp_path, node="local"))
 
     def test_public_with_nothing_reachable_says_so(self, tmp_path, monkeypatch, capsys):
-        monkeypatch.setenv("SCARLETCOIN_PUBLIC_NODES", "http://127.0.0.1:1")
+        monkeypatch.setenv("WEED_PUBLIC_NODES", "http://127.0.0.1:1")
         with pytest.raises(NodeChoiceError, match="no public regtest node answered"):
             resolve_connection(_args(tmp_path, node="public"))
 
     def test_public_picks_the_best_one_without_asking(self, public_node, tmp_path, monkeypatch):
         _, server = public_node
-        monkeypatch.setenv("SCARLETCOIN_PUBLIC_NODES", f"http://127.0.0.1:1,{server.url}")
+        monkeypatch.setenv("WEED_PUBLIC_NODES", f"http://127.0.0.1:1,{server.url}")
         chosen = resolve_connection(_args(tmp_path, node="public"))
         assert chosen.url == server.url
         assert chosen.token == ""
@@ -447,7 +449,7 @@ class TestResolveConnection:
     def test_forgetting_the_node_makes_it_choose_again(self, public_node, tmp_path, monkeypatch):
         _, server = public_node
         save_connection(tmp_path, "regtest", NodeConnection(server.url))
-        monkeypatch.setenv("SCARLETCOIN_PUBLIC_NODES", "http://127.0.0.1:1")
+        monkeypatch.setenv("WEED_PUBLIC_NODES", "http://127.0.0.1:1")
         with pytest.raises(NodeChoiceError):
             resolve_connection(_args(tmp_path, forget_node=True, node="public"))
         assert load_connection(tmp_path, "regtest") is None

@@ -24,7 +24,7 @@ from scarletcoin.net.client import RpcClientError
 
 __all__ = ["main"]
 
-logger = logging.getLogger("scarletcoin.miner")
+logger = logging.getLogger("weed.miner")
 
 
 def _format_rate(rate: float) -> str:
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     # but only when a person is watching. Under a service supervisor the log file
     # is the only record, so leave the logger audible there.
     if args.log_level == "info" and sys.stdout.isatty():
-        logging.getLogger("scarletcoin.miner").setLevel(logging.WARNING)
+        logging.getLogger("weed.miner").setLevel(logging.WARNING)
     try:
         client = resolve_client(args, for_mining=True)
     except NodeChoiceError as exc:

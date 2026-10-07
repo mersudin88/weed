@@ -2,7 +2,7 @@
 
 PyQt5 is an optional dependency; install it with::
 
-    uv sync --extra gui      # or: pip install "scarletcoin[gui]"
+    uv sync --extra gui      # or: pip install "weed[gui]"
 """
 
 __all__ = ["require_qt"]
@@ -23,6 +23,6 @@ def require_qt():
         raise SystemExit(
             "the graphical interface needs PyQt5.\n"
             "Install it with:  uv sync --extra gui\n"
-            'or:               pip install "scarletcoin[gui]"'
+            'or:               pip install "weed[gui]"'
         ) from exc
     return QtCore, QtGui, QtWidgets

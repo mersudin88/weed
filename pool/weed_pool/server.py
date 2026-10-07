@@ -1,9 +1,9 @@
 """Stratum V1 TCP server for merged-mining Bitcoin ASICs.
 
 Accepts connections from standard SHA-256 ASIC miners (Antminer, Whatsminer,
-Avalon, …), hands out jobs whose parent coinbase carries the ScarletCoin
+Avalon, …), hands out jobs whose parent coinbase carries the WEED
 AuxPoW commitment, and submits an AuxPoW proof whenever a share also meets the
-ScarletCoin target.
+WEED target.
 
 The wire protocol follows the de-facto Stratum V1 convention so stock firmware
 works unchanged:
@@ -16,7 +16,7 @@ works unchanged:
 
 Usage::
 
-    python -m pool.scarlet_pool.server --payout-address S...
+    python -m pool.weed_pool.server --payout-address S...
 """
 
 from __future__ import annotations
@@ -49,28 +49,28 @@ logger = logging.getLogger(__name__)
 #: share target is derived from each job's block target, so the submission rate
 #: follows the chain as its difficulty moves.  An explicit value pins it in
 #: Bitcoin difficulty-1 units.  A fixed value is a trap here, because
-#: ScarletCoin's difficulty is orders of magnitude below Bitcoin's difficulty 1
+#: WEED's difficulty is orders of magnitude below Bitcoin's difficulty 1
 #: and moves fast while the network hashrate is changing.
 DEFAULT_SHARE_DIFFICULTY: float | None = None
 
 
-# ── simulated parent chain (SCT-only mining, testing) ────────────────────
+# ── simulated parent chain (WEED-only mining, testing) ────────────────────
 
 
 class SimulatedParentChain:
-    """A stand-in parent chain for mining ScarletCoin on its own.
+    """A stand-in parent chain for mining WEED on its own.
 
-    ScarletCoin never inspects the parent chain's state: an AuxPoW proof is
+    WEED never inspects the parent chain's state: an AuxPoW proof is
     validated against the parent header's proof of work and the commitment in
     its coinbase, not against a real Bitcoin block.  So a pool that only wants
-    to mine SCT can synthesise parent headers, solve them against the
-    ScarletCoin target, and discard the parent side entirely.
+    to mine WEED can synthesise parent headers, solve them against the
+    WEED target, and discard the parent side entirely.
 
     Swap in a ``BitcoinCoreClient`` to earn real BTC from the same hashing.
     """
 
     #: A generous target so the pool's *share* check is not what rejects work;
-    #: the ScarletCoin target is the one that matters.
+    #: the WEED target is the one that matters.
     _EASY_TARGET = 0x7FFFFF0000000000000000000000000000000000000000000000000000000000
 
     def __init__(self, *, height: int = 800_000) -> None:
@@ -102,7 +102,7 @@ class SimulatedParentChain:
 
 
 def payout_address_from_worker(worker: str) -> str | None:
-    """Return the ScarletCoin address embedded in a Stratum worker name.
+    """Return the WEED address embedded in a Stratum worker name.
 
     A Stratum miner cannot build its own coinbase - the pool does - so the only
     way it can be paid is to tell the pool where.  The usual pool convention is
@@ -245,7 +245,7 @@ class StratumSession:
         if len(req.params) >= 1:
             logger.info("miner %s subscribed (agent=%s)", self.address, str(req.params[0])[:80])
 
-        self.subscription_id = f"scarlet-{os.urandom(4).hex()}"
+        self.subscription_id = f"weed-{os.urandom(4).hex()}"
         # One extranonce1 per connection, four bytes, returned to the miner.
         # The pool never puts it into coinbase1: the miner inserts it itself.
         self.extranonce1 = os.urandom(4).hex()
@@ -295,7 +295,7 @@ class StratumSession:
                 await self._send_error(
                     req.id,
                     -32002,
-                    "put your ScarletCoin address in the worker name so the pool can"
+                    "put your WEED address in the worker name so the pool can"
                     " pay you, for example SYoFdo....rig1",
                 )
                 logger.warning(
@@ -354,20 +354,20 @@ class StratumSession:
         share = self._manager.process_share(job, self.extranonce1, extranonce2, ntime, nonce)
 
         landed = False
-        if share.meets_sct_target:
+        if share.meets_weed_target:
             logger.info(
-                "SCT block candidate from %s! parent=%s",
+                "WEED block candidate from %s! parent=%s",
                 worker or self.address,
                 share.hash_hex,
             )
-            result = self._manager.submit_sct_block(
+            result = self._manager.submit_weed_block(
                 job, self.extranonce1, extranonce2, ntime, nonce
             )
             if result and result.get("status") == "connected":
-                logger.info("SCT block accepted: %s", result.get("hash"))
+                logger.info("WEED block accepted: %s", result.get("hash"))
                 landed = True
             else:
-                logger.warning("SCT block rejected: %s", result)
+                logger.warning("WEED block rejected: %s", result)
 
         await self._send_result(req.id, True)
 
@@ -503,9 +503,9 @@ class StratumServer:
                 )
         if self._manager.current is not None:
             logger.debug(
-                "refreshed %s jobs (sct height=%s, share target=%064x)",
+                "refreshed %s jobs (weed height=%s, share target=%064x)",
                 sum(1 for s in self._sessions if s.authorized),
-                self._manager.current.scarlet.height,
+                self._manager.current.weed.height,
                 self._manager.share_target,
             )
 
@@ -527,9 +527,9 @@ class StratumServer:
 
 def create_server(
     *,
-    scarlet_url: str = "http://127.0.0.1:20332",
-    scarlet_token: str | None = None,
-    scarlet_address: str = "",
+    weed_url: str = "http://127.0.0.1:20332",
+    weed_token: str | None = None,
+    weed_address: str = "",
     host: str = "0.0.0.0",
     port: int = 3333,
     job_interval: float = 30.0,
@@ -539,18 +539,18 @@ def create_server(
     parent: ParentChainClient | None = None,
     allow_pool_payout: bool = False,
 ) -> StratumServer:
-    """Build a Stratum server wired to a ScarletCoin node.
+    """Build a Stratum server wired to a WEED node.
 
     The parent chain defaults to :class:`SimulatedParentChain`, which mines
-    ScarletCoin on its own; pass a real ``BitcoinCoreClient`` for BTC merged
+    WEED on its own; pass a real ``BitcoinCoreClient`` for BTC merged
     mining.  Set *chain_id* to refuse to start against the wrong network
     (1 = mainnet, 2 = testnet, 3 = regtest); 0 disables the check.
     """
-    scarlet = RpcClient(scarlet_url, token=scarlet_token, timeout=30.0)
+    weed = RpcClient(weed_url, token=weed_token, timeout=30.0)
     manager = JobManager(
         bitcoin=parent if parent is not None else SimulatedParentChain(),
-        scarlet=scarlet,
-        payout_address=scarlet_address,
+        weed=weed,
+        payout_address=weed_address,
         chain_id=chain_id,
         share_difficulty=share_difficulty,
         coinbase_builder=CoinbaseBuilder(),
@@ -568,21 +568,21 @@ def create_server(
 def _main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="ScarletCoin merged-mining Stratum bridge")
+    parser = argparse.ArgumentParser(description="WEED merged-mining Stratum bridge")
     parser.add_argument(
-        "--scarlet-url",
+        "--weed-url",
         default="http://127.0.0.1:20332",
-        help="ScarletCoin node RPC URL (default: http://127.0.0.1:20332)",
+        help="WEED node RPC URL (default: http://127.0.0.1:20332)",
     )
     parser.add_argument(
-        "--scarlet-token",
+        "--weed-token",
         default=None,
-        help="ScarletCoin RPC bearer token (omit when the node runs --rpc-public-mining)",
+        help="WEED RPC bearer token (omit when the node runs --rpc-public-mining)",
     )
     parser.add_argument(
         "--payout-address",
         default="",
-        help="Fallback SCT address. By default it is unused: each miner is paid"
+        help="Fallback WEED address. By default it is unused: each miner is paid"
         " the address in its worker name. Only used with --allow-pool-payout.",
     )
     parser.add_argument(
@@ -624,9 +624,9 @@ def _main() -> None:
         parser.error("--allow-pool-payout needs --payout-address to fall back to")
 
     server = create_server(
-        scarlet_url=args.scarlet_url,
-        scarlet_token=args.scarlet_token,
-        scarlet_address=args.payout_address,
+        weed_url=args.weed_url,
+        weed_token=args.weed_token,
+        weed_address=args.payout_address,
         host=args.host,
         port=args.port,
         job_interval=args.job_interval,
@@ -635,7 +635,7 @@ def _main() -> None:
         chain_id=args.chain_id,
         allow_pool_payout=args.allow_pool_payout,
     )
-    logger.info("ScarletCoin node: %s", args.scarlet_url)
+    logger.info("WEED node: %s", args.weed_url)
     if args.allow_pool_payout:
         logger.info("Miners without an address are paid to %s", args.payout_address)
     else:

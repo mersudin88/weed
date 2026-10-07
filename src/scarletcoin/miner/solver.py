@@ -118,7 +118,7 @@ def _native_scan() -> Callable[[bytes, int, int, int], int] | None:
         if not library.exists():
             _native_func = None
             return None
-        scanner = ctypes.CDLL(str(library)).scarlet_scan_nonces
+        scanner = ctypes.CDLL(str(library)).weed_scan_nonces
         scanner.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint, ctypes.c_uint]
         scanner.restype = ctypes.c_longlong
         _native_func = _make_native_caller(scanner)
@@ -162,7 +162,7 @@ def compile_native() -> None:
 
 
 def _cache_path() -> Path:
-    return Path(tempfile.gettempdir()) / "scarletcoin-native" / "_scan_nonces.so"
+    return Path(tempfile.gettempdir()) / "weed-native" / "_scan_nonces.so"
 
 
 def _make_native_caller(scanner) -> Callable[[bytes, int, int, int], int]:

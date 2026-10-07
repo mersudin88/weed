@@ -14,7 +14,7 @@ Supported operations:
   dummy element, unlike Bitcoin's historical off-by-one).
 
 The only context execution needs is the 32-byte signature hash of the input
-being spent, supplied by the caller.  ``OP_HASH160`` uses ScarletCoin's
+being spent, supplied by the caller.  ``OP_HASH160`` uses WEED's
 ``hash256[:20]`` digest, the same convention as addresses.
 """
 

@@ -8,7 +8,7 @@ The problem is knowing which public nodes exist. This module solves it in three
 steps, cheapest first:
 
 1. the list built into the release (:attr:`ChainParams.public_nodes`), plus
-   anything the user has added by hand or through ``SCARLETCOIN_PUBLIC_NODES``;
+   anything the user has added by hand or through ``WEED_PUBLIC_NODES``;
 2. every candidate is probed in parallel — reachable, right network, how far
    along, how fast to answer;
 3. whichever ones answer are asked for the public nodes *they* know
@@ -74,7 +74,7 @@ _HOSTNAME = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$")
 def normalise_url(text: str) -> str:
     """Turn whatever somebody typed into a base URL, or return ``""``.
 
-    ``scarletcoin.example.net`` becomes ``https://scarletcoin.example.net``;
+    ``weed.example.net`` becomes ``https://weed.example.net``;
     a bare address with a port becomes plain HTTP, because that is what a node on
     a local network serves. Paths, query strings and fragments are dropped: this
     is a base URL, and the client appends ``/rpc`` itself.
@@ -190,7 +190,7 @@ def nodes_path(datadir: str | Path, network: str) -> Path:
 def user_nodes(datadir: str | Path | None, network: str) -> list[PublicNode]:
     """Public nodes the user saved, newest first, plus any from the environment."""
     found: list[PublicNode] = []
-    for text in (os.environ.get("SCARLETCOIN_PUBLIC_NODES") or "").split(","):
+    for text in (os.environ.get("WEED_PUBLIC_NODES") or "").split(","):
         url = normalise_url(text)
         if url:
             found.append(PublicNode(url, "environment"))
@@ -284,7 +284,7 @@ def probe(node: PublicNode, *, timeout: float = PROBE_TIMEOUT) -> NodeStatus:
         return status
     status.latency = time.monotonic() - started
     if not isinstance(info, dict):  # pragma: no cover - a node always answers a dict
-        status.error = "that is not a ScarletCoin node"
+        status.error = "that is not a WEED node"
         return status
     status.reachable = True
     status.network = info.get("network")

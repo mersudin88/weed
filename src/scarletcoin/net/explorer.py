@@ -123,7 +123,7 @@ def _page(server: RpcServer, title: str, body: str) -> str:
     <a href="/mempool">Mempool</a>
     <a href="/peers">Peers</a>
     <a href="/rich">Rich list</a>
-    <a href="https://alessio-ds.github.io/scarletcoin-web-wallet/">Web wallet</a>
+    <a href="https://alessio-ds.github.io/weed-web-wallet/">Web wallet</a>
   </nav>
   <form action="/search" method="get">
     <input type="text" name="q" placeholder="block height, hash, txid or address" required>
@@ -299,7 +299,7 @@ def _duration(seconds: float | None) -> str:
 
 
 def _amount(scar: int) -> str:
-    """An amount in SCT, coloured."""
+    """An amount in WEED, coloured."""
     return f'<span class="amount">{escape(format_amount(scar))}</span>'
 
 

@@ -1,4 +1,4 @@
-"""ScarletCoin: a small but complete proof-of-work cryptocurrency.
+"""WEED: a small but complete proof-of-work cryptocurrency.
 
 The package is organised in layers, each usable on its own:
 

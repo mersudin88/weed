@@ -1,7 +1,7 @@
 [project]
-name = "scarletcoin"
+name = "weed"
 version = "2.7.6"
-description = "ScarletCoin: a small but complete proof-of-work cryptocurrency with a real blockchain, peer-to-peer nodes, wallet and miner."
+description = "WEED: a small but complete proof-of-work cryptocurrency with a real blockchain, peer-to-peer nodes, wallet and miner."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
@@ -29,11 +29,11 @@ weed-node = "scarletcoin.net.cli:main"
 weed-wallet = "scarletcoin.wallet.cli:main"
 weed-miner = "scarletcoin.miner.cli:main"
 weed-wallet-gui = "scarletcoin.gui.wallet_app:main"
-scarlet-miner-gui = "scarletcoin.gui.miner_app:main"
+weed-miner-gui = "scarletcoin.gui.miner_app:main"
 
 [project.urls]
-Homepage = "https://github.com/alessio-ds/ScarletCoin"
-Repository = "https://github.com/alessio-ds/ScarletCoin"
+Homepage = "https://github.com/alessio-ds/WEED"
+Repository = "https://github.com/alessio-ds/WEED"
 
 [build-system]
 requires = ["hatchling"]

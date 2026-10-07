@@ -91,11 +91,11 @@ For reference (to be finalized):
 
 ## Risks
 
-1. **Difficulty spike** — if a large Bitcoin pool enables merged mining, the ScarletCoin difficulty could increase 100x–1000x nearly instantly. The per-block observed-hashrate retargeting algorithm will adjust quickly (within the retarget window), but the first few blocks after a big miner joins will be found very fast.
+1. **Difficulty spike** — if a large Bitcoin pool enables merged mining, the WEED difficulty could increase 100x–1000x nearly instantly. The per-block observed-hashrate retargeting algorithm will adjust quickly (within the retarget window), but the first few blocks after a big miner joins will be found very fast.
 
-2. **Miner exit** — if a large pool stops mining ScarletCoin, the hashrate drops. The per-block retargeting handles this without a death spiral because it measures actual hashrate from the trailing time window, not from a fixed block count.
+2. **Miner exit** — if a large pool stops mining WEED, the hashrate drops. The per-block retargeting handles this without a death spiral because it measures actual hashrate from the trailing time window, not from a fixed block count.
 
-3. **Reorg risk** — merged mining does not increase reorg risk because ScarletCoin chainwork is based on the ScarletCoin target, not Bitcoin difficulty. An attacker must still provide work meeting the ScarletCoin target to reorganise the chain.
+3. **Reorg risk** — merged mining does not increase reorg risk because WEED chainwork is based on the WEED target, not Bitcoin difficulty. An attacker must still provide work meeting the WEED target to reorganise the chain.
 
 ## Testing
 

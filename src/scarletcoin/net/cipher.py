@@ -25,7 +25,7 @@ NONCE_SIZE = 12
 TAG_SIZE = 16
 _KEY_SIZE = 32
 
-_HKDF_INFO = b"scarletcoin-p2p/1"
+_HKDF_INFO = b"weed-p2p/1"
 
 
 def generate_ephemeral_key() -> ec.EllipticCurvePrivateKey:

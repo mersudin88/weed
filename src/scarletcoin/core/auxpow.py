@@ -1,10 +1,10 @@
 """AuxPoW (merged mining) data structures and validation.
 
 Implements Namecoin-style AuxPoW so that a Bitcoin SHA-256d miner can produce
-proof-of-work that is valid for both Bitcoin and ScarletCoin without doing extra
-hashing.  The ScarletCoin block hash is committed into the Bitcoin coinbase via
+proof-of-work that is valid for both Bitcoin and WEED without doing extra
+hashing.  The WEED block hash is committed into the Bitcoin coinbase via
 a merged-mining marker, and the parent Bitcoin block hash must satisfy the
-ScarletCoin target.
+WEED target.
 
 Reference: :mod:`scarletcoin.core.auxpow`
 """
@@ -101,7 +101,7 @@ def check_merkle_branch(
 class ParentBlockHeader:
     """An 80-byte Bitcoin-style block header from the parent chain.
 
-    This is a separate type from ScarletCoin's :class:`~scarletcoin.core.block.BlockHeader`
+    This is a separate type from WEED's :class:`~scarletcoin.core.block.BlockHeader`
     to avoid accidental consensus coupling. Serialisation is little-endian, exactly
     as Bitcoin uses.
     """
@@ -295,7 +295,7 @@ def get_expected_index(nonce: int, chain_id: int, aux_tree_height: int) -> int:
 
     This is the Namecoin-style calculation: the index is derived from
     ``nonce``, ``chain_id``, and the auxiliary Merkle tree height so that a
-    miner cannot place the ScarletCoin commitment at an arbitrary slot.
+    miner cannot place the WEED commitment at an arbitrary slot.
 
     The formula (from Namecoin's ``getExpectedIndex``):
 
@@ -334,8 +334,8 @@ class AuxPoW:
     """A complete merged-mining proof.
 
     Contains all the data needed to validate that a parent Bitcoin block's
-    proof of work also satisfies ScarletCoin's target.  Stored alongside (but
-    separate from) the ScarletCoin block so that the ScarletCoin block hash
+    proof of work also satisfies WEED's target.  Stored alongside (but
+    separate from) the WEED block so that the WEED block hash
     is not affected by the AuxPoW payload.
     """
 
@@ -346,10 +346,10 @@ class AuxPoW:
     coinbase_index: int
     """The coinbase's 0-based position in the parent block's Merkle tree."""
     aux_merkle_branch: tuple[bytes, ...]
-    """Sibling hashes proving the ScarletCoin block hash is part of the
+    """Sibling hashes proving the WEED block hash is part of the
     auxiliary Merkle tree."""
     aux_chain_index: int
-    """The 0-based index of ScarletCoin in the auxiliary Merkle tree."""
+    """The 0-based index of WEED in the auxiliary Merkle tree."""
     parent_header: ParentBlockHeader
     """The 80-byte Bitcoin parent block header."""
 
@@ -474,17 +474,17 @@ def validate_auxpow(
     *,
     chain_id: int,
 ) -> None:
-    """Validate an AuxPoW proof for a ScarletCoin block.
+    """Validate an AuxPoW proof for a WEED block.
 
     This is the single authoritative function that decides whether a
     merged-mined proof is valid.  It follows the Namecoin validation model.
 
     Args:
         auxpow: The parsed AuxPoW structure.
-        aux_block_hash: The 32-byte ScarletCoin block header hash (internal byte
+        aux_block_hash: The 32-byte WEED block header hash (internal byte
             order) that must be proved.
         aux_target: The integer target the parent PoW must satisfy (from
-            ScarletCoin's own ``bits``).
+            WEED's own ``bits``).
         chain_id: The configured AuxPoW chain ID of this network.
 
     Raises:
@@ -511,7 +511,7 @@ def validate_auxpow(
         raise AuxPoWError("parent coinbase transaction is not a coinbase")
 
     # Step B — aux block hash is already provided by the caller --------------
-    # (the ScarletCoin block hash is the value being proved)
+    # (the WEED block hash is the value being proved)
 
     if len(aux_block_hash) != 32:
         raise AuxPoWError("aux block hash must be 32 bytes")
@@ -562,10 +562,10 @@ def validate_auxpow(
     if coinbase_root != auxpow.parent_header.merkle_root:
         raise AuxPoWError("the coinbase Merkle root does not match the parent block's Merkle root")
 
-    # Step G — verify parent PoW against ScarletCoin target -------------------
+    # Step G — verify parent PoW against WEED target -------------------
 
     parent_hash_int = int.from_bytes(auxpow.parent_hash, "little")
     if parent_hash_int > aux_target:
-        raise AuxPoWError("parent block hash does not satisfy the ScarletCoin target")
+        raise AuxPoWError("parent block hash does not satisfy the WEED target")
 
     # If we made it here, the proof is valid.

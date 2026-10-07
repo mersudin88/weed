@@ -1,4 +1,4 @@
-"""Parent coinbase construction carrying a ScarletCoin AuxPoW commitment.
+"""Parent coinbase construction carrying a WEED AuxPoW commitment.
 
 The "parent" coinbase in an AuxPoW proof is represented by the consensus code
 as an ordinary :class:`~scarletcoin.core.transaction.Transaction` whose
@@ -130,7 +130,7 @@ def parse_coinbase_body(body: bytes) -> Transaction:
 
 
 class CoinbaseBuilder:
-    """Builds parent coinbases containing ScarletCoin AuxPoW commitments."""
+    """Builds parent coinbases containing WEED AuxPoW commitments."""
 
     def __init__(
         self,

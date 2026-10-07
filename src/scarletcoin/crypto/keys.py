@@ -3,7 +3,7 @@
 The heavy lifting is delegated to ``cryptography`` (OpenSSL), so the curve
 arithmetic is constant-time and audited rather than hand-rolled.  Signatures use
 RFC 6979 deterministic nonces, so no randomness is involved in signing.  This
-module only adds the ScarletCoin encodings on top of it:
+module only adds the WEED encodings on top of it:
 
 * private keys are 32 raw bytes, exported as Base58Check "WIF" strings;
 * public keys are always the 33-byte *compressed* SEC1 form, so a signature can

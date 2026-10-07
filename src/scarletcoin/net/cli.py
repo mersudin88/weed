@@ -26,7 +26,7 @@ from scarletcoin.net.node import Node, NodeConfig
 from scarletcoin.net.rpc import MINING_METHODS, PUBLIC_METHODS, RpcServer
 from scarletcoin.units import format_bytes
 
-logger = logging.getLogger("scarletcoin.node")
+logger = logging.getLogger("weed.node")
 
 _LOOPBACK = ("127.0.0.1", "::1", "localhost")
 

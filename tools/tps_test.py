@@ -1,4 +1,4 @@
-"""Load-test a ScarletCoin node: how many transactions per second can it take?
+"""Load-test a WEED node: how many transactions per second can it take?
 
 The test works in three stages and is non-destructive: every coin the wallet
 spends comes back to it, so the balance only shrinks by the fees.
@@ -25,7 +25,7 @@ Example::
 On ``regtest`` the node can mine instantly, so the script calls ``generate``
 itself to confirm the split and (during ``--watch``) to clear the mempool. On
 mainnet and testnet the split needs a real miner before ``run`` can find the
-UTXOs; start one with ``scarlet-miner`` or let a public network mine it.
+UTXOs; start one with ``weed-miner`` or let a public network mine it.
 """
 
 from __future__ import annotations
@@ -105,7 +105,7 @@ def _make_wallet(args: argparse.Namespace) -> Wallet:
 
 
 def _amount(scar: int) -> str:
-    return f"{format_amount(scar)} SCT"
+    return f"{format_amount(scar)} WEED"
 
 
 def _max_split_outputs(params, input_count: int) -> int:
@@ -510,9 +510,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tps_test",
-        description="Measure how many transactions per second a ScarletCoin node can take.",
+        description="Measure how many transactions per second a WEED node can take.",
     )
-    parser.add_argument("--version", action="version", version=f"scarletcoin {__version__}")
+    parser.add_argument("--version", action="version", version=f"weed {__version__}")
 
     def add_common(sub: argparse.ArgumentParser) -> None:
         add_network_arguments(sub)

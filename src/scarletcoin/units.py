@@ -1,6 +1,6 @@
-"""Converting between ScarletCoin amounts and human-readable strings.
+"""Converting between WEED amounts and human-readable strings.
 
-Amounts are always integers internally.  One SCT is ``COIN`` (100 000 000) scar,
+Amounts are always integers internally.  One WEED is ``COIN`` (100 000 000) scar,
 the smallest unit; floating point is never used for money.
 
 Byte counts (how big the chain is, how big a block is) are rendered here too, so
@@ -24,7 +24,7 @@ _BYTE_UNITS = ("B", "kB", "MB", "GB", "TB", "PB")
 
 
 def format_amount(scar: int, *, symbol: bool = False) -> str:
-    """Render an integer amount of scar as a decimal SCT string.
+    """Render an integer amount of scar as a decimal WEED string.
 
     >>> format_amount(1_234_500_000)
     '12.345'
@@ -36,7 +36,7 @@ def format_amount(scar: int, *, symbol: bool = False) -> str:
     text = f"{sign}{whole}"
     if fraction:
         text += f".{fraction:0{_PLACES}d}".rstrip("0")
-    return f"{text} SCT" if symbol else text
+    return f"{text} WEED" if symbol else text
 
 
 def format_bytes(count: int) -> str:
@@ -67,13 +67,13 @@ def format_bytes(count: int) -> str:
 
 
 def parse_amount(text: str) -> int:
-    """Parse a decimal SCT string into an integer number of scar.
+    """Parse a decimal WEED string into an integer number of scar.
 
     Raises:
         ValueError: if the text is not a number, has too many decimals, is
             negative, or exceeds the maximum money supply.
     """
-    cleaned = str(text).strip().removesuffix("SCT").strip()
+    cleaned = str(text).strip().removesuffix("WEED").strip()
     if not cleaned:
         raise ValueError("no amount given")
     try:

@@ -1,4 +1,4 @@
-"""Cryptographic primitives used by ScarletCoin."""
+"""Cryptographic primitives used by WEED."""
 
 from scarletcoin.crypto.base58 import (
     Base58Error,

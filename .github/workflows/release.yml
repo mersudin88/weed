@@ -62,7 +62,7 @@ jobs:
             }
           }
           Write-Host "Compiling the installer with $iscc"
-          & $iscc /DMyAppVersion=$version packaging\windows\scarletcoin.iss
+          & $iscc /DMyAppVersion=$version packaging\windows\WEED.iss
           if ($LASTEXITCODE -ne 0) {
             throw "ISCC failed with exit code $LASTEXITCODE"
           }
@@ -70,7 +70,7 @@ jobs:
       - name: Upload the release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: scarletcoin-${{ matrix.os }}
+          name: WEED-${{ matrix.os }}
           path: |
             release/*.zip
             release/*.tar.gz
@@ -103,13 +103,13 @@ jobs:
 
       - name: Name the archive for the Fedora build
         run: |
-          archive=$(ls release/ScarletCoin-*-linux-x86_64.tar.gz)
+          archive=$(ls release/WEED-*-linux-x86_64.tar.gz)
           mv "$archive" "${archive/linux-x86_64/linux-fc44-x86_64}"
 
       - name: Upload the release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: scarletcoin-fedora
+          name: WEED-fedora
           path: release/*.tar.gz
           if-no-files-found: error
 

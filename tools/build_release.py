@@ -10,8 +10,8 @@ Usage::
 
     python tools/build_release.py
 
-Writes ``release/ScarletCoin-<version>-<platform>.zip`` on Windows and
-``release/ScarletCoin-<version>-<platform>.tar.gz`` on Linux and macOS.  The
+Writes ``release/WEED-<version>-<platform>.zip`` on Windows and
+``release/WEED-<version>-<platform>.tar.gz`` on Linux and macOS.  The
 Windows installer is compiled separately with Inno Setup (see
 ``packaging/windows``).
 """
@@ -38,9 +38,9 @@ VENV = ROOT / ".venv-release"
 
 #: (executable name, entry-point source file, keep the console window).
 APPS = [
-    ("scarlet-wallet-gui", "src/scarletcoin/gui/wallet_app.py", False),
-    ("scarlet-miner-gui", "src/scarletcoin/gui/miner_app.py", False),
-    ("scarlet-node", "src/scarletcoin/net/cli.py", True),
+    ("weed-wallet-gui", "src/scarletcoin/gui/wallet_app.py", False),
+    ("weed-miner-gui", "src/scarletcoin/gui/miner_app.py", False),
+    ("weed-node", "src/scarletcoin/net/cli.py", True),
 ]
 
 #: Package data files PyInstaller would otherwise not bundle.  Each entry is a
@@ -137,12 +137,12 @@ def package(version: str, tag: str) -> Path:
     if not files:
         raise SystemExit("nothing to package: the bundle is empty")
     if os.name == "nt":
-        target = RELEASE / f"ScarletCoin-{version}-{tag}.zip"
+        target = RELEASE / f"WEED-{version}-{tag}.zip"
         with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
             for path in files:
                 archive.write(path, arcname=path.name)
     else:
-        target = RELEASE / f"ScarletCoin-{version}-{tag}.tar.gz"
+        target = RELEASE / f"WEED-{version}-{tag}.tar.gz"
         with tarfile.open(target, "w:gz") as archive:
             for path in files:
                 archive.add(path, arcname=path.name)
@@ -166,7 +166,7 @@ def main() -> int:
 
     version = project_version()
     tag = platform_tag()
-    print(f"building ScarletCoin {version} for {tag}")
+    print(f"building WEED {version} for {tag}")
     build_apps(python)
     package(version, tag)
     return 0

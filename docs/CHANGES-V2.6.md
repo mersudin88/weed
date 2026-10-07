@@ -1,4 +1,4 @@
-# ScarletCoin 2.6.0
+# WEED 2.6.0
 
 This release is about making a wallet that holds a lot of small coins usable
 again.  Sending from such a wallet — and "send everything" in particular — used
@@ -10,7 +10,7 @@ itself for the duration.
 `Transaction.signature_hash()` commits to the whole transaction body, and the
 body does not depend on which input is being signed.  It was rebuilt and
 re-hashed once per input, so signing and verifying a transaction with *n*
-inputs cost *O(n²)*.  A sweep of a few thousand 50-SCT coinbase outputs built
+inputs cost *O(n²)*.  A sweep of a few thousand 50-WEED coinbase outputs built
 half-megabyte transactions and spent most of a minute inside that loop; on the
 live mainnet node a single such transaction drove the process to a standstill
 for minutes.

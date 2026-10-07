@@ -1,6 +1,6 @@
 """Hash helpers.
 
-ScarletCoin uses SHA-256 as its only hash primitive so that every implementation
+WEED uses SHA-256 as its only hash primitive so that every implementation
 can be reproduced with nothing but the Python standard library:
 
 ``hash256``

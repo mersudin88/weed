@@ -1,6 +1,6 @@
 """Transactions.
 
-ScarletCoin uses the UTXO model.  A transaction spends whole *unspent outputs*
+WEED uses the UTXO model.  A transaction spends whole *unspent outputs*
 created by earlier transactions and creates new ones.  An output is either a
 pay-to-public-key-hash or a pay-to-script-hash (P2SH); spending one means
 satisfying the lock with a *witness*: a stack of data items whose meaning
@@ -52,7 +52,7 @@ __all__ = [
 ]
 
 #: Domain separation tag mixed into every signature hash.
-_SIGHASH_TAG: Final[bytes] = b"ScarletCoin/sighash/2"
+_SIGHASH_TAG: Final[bytes] = b"WEED/sighash/2"
 
 #: Output types.
 OUTPUT_P2PKH: Final[int] = 0

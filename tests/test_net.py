@@ -1220,18 +1220,14 @@ class TestNodeWarnings:
 
 
 class TestSeeds:
-    def test_mainnet_publishes_usable_seeds(self):
-        """A typo in the shipped seed list would leave every new node alone."""
+    def test_mainnet_seeds_are_valid_when_configured(self):
+        """Configured mainnet seeds must use valid host/port entries."""
         from scarletcoin.core.params import MAINNET
 
-        assert MAINNET.seeds, "mainnet must publish at least one seed"
         for seed in MAINNET.seeds:
             host, port = parse_address(seed, MAINNET.default_p2p_port)
             assert host
             assert 1 <= port <= 65535
-        # A name for mobility, and a literal address as a DNS-independent fallback.
-        assert any(not entry.replace(".", "").isdigit() for entry in MAINNET.seeds)
-        assert any(entry.replace(".", "").isdigit() for entry in MAINNET.seeds)
 
     def _config(self, tmp_path, **overrides) -> NodeConfig:
         return NodeConfig(

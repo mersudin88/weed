@@ -1,4 +1,4 @@
-"""``scarlet-wallet-gui``: a Qt desktop wallet.
+"""``weed-wallet-gui``: a Qt desktop wallet.
 
 The window is a thin layer over :class:`scarletcoin.wallet.wallet.Wallet`: every
 balance and history query goes to a node over RPC in a worker thread, and every
@@ -89,7 +89,7 @@ class WalletWindow(QtWidgets.QMainWindow):
         self._threads: list[QtCore.QThread] = []
         self._snapshot: dict = {}
 
-        self.setWindowTitle(f"ScarletCoin wallet - {keystore.params.name}")
+        self.setWindowTitle(f"WEED wallet - {keystore.params.name}")
         self.resize(880, 620)
         self._build_menu()
         self._build_ui()
@@ -131,7 +131,7 @@ class WalletWindow(QtWidgets.QMainWindow):
         layout.setSpacing(12)
 
         header = QtWidgets.QHBoxLayout()
-        title = QtWidgets.QLabel("ScarletCoin")
+        title = QtWidgets.QLabel("WEED")
         title.setObjectName("title")
         header.addWidget(title)
         header.addStretch(1)
@@ -141,7 +141,7 @@ class WalletWindow(QtWidgets.QMainWindow):
         layout.addLayout(header)
 
         summary = QtWidgets.QHBoxLayout()
-        self.balance_label = QtWidgets.QLabel("0 SCT")
+        self.balance_label = QtWidgets.QLabel("0 WEED")
         self.balance_label.setObjectName("balance")
         summary.addWidget(self.balance_label)
         summary.addSpacing(24)
@@ -178,7 +178,7 @@ class WalletWindow(QtWidgets.QMainWindow):
         self.send_amount = QtWidgets.QLineEdit()
         self.send_amount.setPlaceholderText("0.00000000")
         amount_row.addWidget(self.send_amount, 1)
-        amount_row.addWidget(QtWidgets.QLabel("SCT"))
+        amount_row.addWidget(QtWidgets.QLabel("WEED"))
         self.send_everything = QtWidgets.QCheckBox("send everything")
         self.send_everything.toggled.connect(self.send_amount.setDisabled)
         amount_row.addWidget(self.send_everything)
@@ -285,10 +285,10 @@ class WalletWindow(QtWidgets.QMainWindow):
         self._snapshot = snapshot
         balance = snapshot["balance"]
         info = snapshot["info"]
-        self.balance_label.setText(f"{format_amount(balance.spendable)} SCT")
+        self.balance_label.setText(f"{format_amount(balance.spendable)} WEED")
         details = [f"{balance.utxo_count} unspent outputs"]
         if balance.immature:
-            details.append(f"{format_amount(balance.immature)} SCT still maturing")
+            details.append(f"{format_amount(balance.immature)} WEED still maturing")
         self.detail_label.setText("  ·  ".join(details))
         chain = ""
         if info.get("chain_size"):
@@ -315,7 +315,7 @@ class WalletWindow(QtWidgets.QMainWindow):
         _fill(
             self.address_table,
             [
-                [address, label, f"{format_amount(value)} SCT"]
+                [address, label, f"{format_amount(value)} WEED"]
                 for address, label, value in snapshot["addresses"]
             ],
             mono_columns={0},
@@ -325,7 +325,7 @@ class WalletWindow(QtWidgets.QMainWindow):
             [
                 [
                     str(item["height"]),
-                    f"{'+' if item['net'] >= 0 else '-'}{format_amount(abs(item['net']))} SCT",
+                    f"{'+' if item['net'] >= 0 else '-'}{format_amount(abs(item['net']))} WEED",
                     str(item["confirmations"]),
                     item["txid"],
                 ]
@@ -337,7 +337,7 @@ class WalletWindow(QtWidgets.QMainWindow):
             self.coins_table,
             [
                 [
-                    f"{format_amount(coin.value)} SCT",
+                    f"{format_amount(coin.value)} WEED",
                     str(max(0, info["height"] - coin.height + 1)),
                     "coinbase" if coin.is_coinbase else "payment",
                     f"{outpoint.txid[::-1].hex()}:{outpoint.index}",
@@ -610,8 +610,8 @@ class WalletWindow(QtWidgets.QMainWindow):
         answer = QtWidgets.QMessageBox.question(
             self,
             "Confirm payment",
-            f"Pay {format_amount(paid)} SCT to\n{self.send_address.text().strip()}\n\n"
-            f"Fee: {format_amount(total_fee)} SCT ({total_size} bytes, {count} transaction"
+            f"Pay {format_amount(paid)} WEED to\n{self.send_address.text().strip()}\n\n"
+            f"Fee: {format_amount(total_fee)} WEED ({total_size} bytes, {count} transaction"
             f"{'s' if count != 1 else ''})",
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel,
         )
@@ -731,8 +731,8 @@ class WalletWindow(QtWidgets.QMainWindow):
     def _about(self) -> None:
         QtWidgets.QMessageBox.about(
             self,
-            "About ScarletCoin",
-            f"<h3>ScarletCoin wallet {__version__}</h3>"
+            "About WEED",
+            f"<h3>WEED wallet {__version__}</h3>"
             "<p>A proof-of-work cryptocurrency with a real blockchain, "
             "peer-to-peer nodes, a wallet and a miner.</p>"
             f"<p>Network: {self.keystore.params.name}<br>"
@@ -818,9 +818,9 @@ def create_wallet(path: Path, network: str, parent: QtWidgets.QWidget | None) ->
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for ``scarlet-wallet-gui``."""
+    """Entry point for ``weed-wallet-gui``."""
     parser = argparse.ArgumentParser(
-        prog="scarlet-wallet-gui", description="ScarletCoin desktop wallet."
+        prog="weed-wallet-gui", description="WEED desktop wallet."
     )
     parser.add_argument("--wallet", type=Path, help="wallet file to open")
     add_common_gui_arguments(parser)
@@ -839,7 +839,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         box = QtWidgets.QMessageBox(
             QtWidgets.QMessageBox.Information,
-            "ScarletCoin",
+            "WEED",
             f"No wallet at\n{path}\n\nWhat would you like to do?",
             QtWidgets.QMessageBox.Cancel,
         )

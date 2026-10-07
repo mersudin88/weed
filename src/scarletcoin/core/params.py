@@ -26,7 +26,7 @@ from scarletcoin.core.transaction import MAX_MONEY, Transaction
 
 __all__ = ["COIN", "MAX_MONEY", "NETWORKS", "ChainParams", "get_params", "network_names"]
 
-#: Smallest indivisible units in one ScarletCoin.  The unit is called a "scar".
+#: Smallest indivisible units in one WEED.  The unit is called a "weed".
 COIN: Final[int] = 100_000_000
 
 #: Genesis outputs pay this (provably unspendable) hash: nobody owns the genesis coins.
@@ -35,7 +35,7 @@ _UNSPENDABLE_HASH: Final[bytes] = b"\x00" * 20
 
 @dataclass(frozen=True)
 class ChainParams:
-    """Consensus and network constants for one ScarletCoin network."""
+    """Consensus and network constants for one WEED network."""
 
     name: str
     magic: bytes
@@ -226,15 +226,15 @@ MAINNET = ChainParams(
     genesis_message=_GENESIS_MESSAGE,
     # Long-lived host names of the network's public nodes. A name may hold
     # several A/AAAA records; a starting node tries all of them and then learns
-    # the rest of the network by gossip. Port 20333 is assumed when omitted.
+    # the rest of the network by gossip. Port 28333 is assumed when omitted.
     # The literal address is a fallback for when DNS is broken, filtered, or
     # answered by a proxy that cannot carry the peer-to-peer protocol.
-    seeds=("scarletcoin.remotewire.net", "45.126.126.139"),
+    seeds=(),
     # Nodes that serve the public RPC methods over HTTPS, so a wallet or a miner
     # can be useful before it has a chain of its own. Whichever of these answers
     # first is asked for the others, so this list only has to get a client
     # started, not stay complete.
-    public_nodes=("https://scarletcoin.remotewire.net",),
+    public_nodes=(),
     auxpow_chain_id=1,
     # Activated at a fixed height so every operator has a definite cutover
     # point.  Before this height an AuxPoW block is rejected outright; after

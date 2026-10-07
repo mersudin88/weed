@@ -35,7 +35,7 @@ __all__ = [
 ]
 
 #: Where node and wallet data live unless told otherwise.
-DEFAULT_DATADIR = Path(os.environ.get("SCARLETCOIN_DATADIR") or Path.home() / ".scarletcoin")
+DEFAULT_DATADIR = Path(os.environ.get("WEED_DATADIR") or Path.home() / ".weed")
 
 TOKEN_FILENAME = "rpc.token"
 
@@ -66,7 +66,7 @@ def add_network_arguments(parser: argparse.ArgumentParser) -> None:
     """Add ``--network`` and ``--datadir``."""
     parser.add_argument(
         "--network",
-        default=os.environ.get("SCARLETCOIN_NETWORK", "mainnet"),
+        default=os.environ.get("WEED_NETWORK", "mainnet"),
         choices=network_names(),
         help="which network to use (default: %(default)s)",
     )
@@ -88,12 +88,12 @@ def add_connection_arguments(parser: argparse.ArgumentParser) -> None:
     """Add the options needed to reach a node's RPC interface."""
     parser.add_argument(
         "--rpc-url",
-        default=os.environ.get("SCARLETCOIN_RPC_URL"),
+        default=os.environ.get("WEED_RPC_URL"),
         help="node RPC URL (default: http://127.0.0.1:<network port>)",
     )
     parser.add_argument(
         "--rpc-token",
-        default=os.environ.get("SCARLETCOIN_RPC_TOKEN"),
+        default=os.environ.get("WEED_RPC_TOKEN"),
         help="RPC token; read from the node's rpc.token file when omitted",
     )
     parser.add_argument("--timeout", type=float, default=30.0, help="RPC timeout in seconds")
@@ -107,7 +107,7 @@ def add_node_choice_arguments(parser: argparse.ArgumentParser) -> None:
     """
     parser.add_argument(
         "--node",
-        default=os.environ.get("SCARLETCOIN_NODE"),
+        default=os.environ.get("WEED_NODE"),
         metavar="local|public|ask|URL",
         help="which node to use: 'local' for one on this machine, 'public' to pick"
         " the best public node, 'ask' to be offered the choice, or a node URL."
@@ -235,7 +235,7 @@ def make_client(args: argparse.Namespace) -> RpcClient:
 
 
 def maybe_check_version(datadir: str | Path) -> None:
-    """Log a warning when a newer ScarletCoin release is on PyPI.
+    """Log a warning when a newer WEED release is on PyPI.
 
     Called once at start-up by every CLI tool.  The check is cached for a day
     and never blocks — a slow or unreachable PyPI is silently ignored.
@@ -251,8 +251,8 @@ def maybe_check_version(datadir: str | Path) -> None:
         from scarletcoin import __version__ as current
 
         logger.warning(
-            "ScarletCoin %s is available (you are running %s)."
-            " Upgrade with: pip install --upgrade scarletcoin",
+            "WEED %s is available (you are running %s)."
+            " Upgrade with: pip install --upgrade weed",
             latest,
             current,
         )

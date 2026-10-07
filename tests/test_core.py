@@ -501,11 +501,11 @@ class TestUnits:
         assert format_amount(scar) == text
 
     def test_format_with_symbol(self):
-        assert format_amount(10**8, symbol=True) == "1 SCT"
+        assert format_amount(10**8, symbol=True) == "1 WEED"
 
     @pytest.mark.parametrize(
         ("text", "scar"),
-        [("1", 10**8), ("0.00000001", 1), (" 12.345 SCT ", 1_234_500_000), ("0", 0)],
+        [("1", 10**8), ("0.00000001", 1), (" 12.345 WEED ", 1_234_500_000), ("0", 0)],
     )
     def test_parse(self, text, scar):
         assert parse_amount(text) == scar

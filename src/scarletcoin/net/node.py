@@ -1,4 +1,4 @@
-"""The ScarletCoin node.
+"""The WEED node.
 
 A node keeps the blockchain, relays blocks and transactions, and answers RPC
 calls.  It runs a handful of daemon threads:
@@ -105,7 +105,7 @@ class NodeConfig:
     """Everything needed to start a :class:`Node`."""
 
     network: str = "mainnet"
-    datadir: Path = field(default_factory=lambda: Path.home() / ".scarletcoin")
+    datadir: Path = field(default_factory=lambda: Path.home() / ".weed")
     listen: bool = True
     p2p_host: str = "0.0.0.0"
     p2p_port: int | None = None
@@ -1111,7 +1111,7 @@ class Node:
     def find_aux_candidate(self, aux_block_hash: bytes):
         """Return the stored candidate for ``aux_block_hash``, or ``None``.
 
-        A candidate becomes stale (``None``) when the underlying ScarletCoin tip
+        A candidate becomes stale (``None``) when the underlying WEED tip
         has moved on, or when it was never stored.
         """
         with self._aux_candidates_lock:

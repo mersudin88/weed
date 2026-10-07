@@ -1,4 +1,4 @@
-"""Stress-test a ScarletCoin node by sending transactions between two wallets at a steady TPS rate.
+"""Stress-test a WEED node by sending transactions between two wallets at a steady TPS rate.
 
 The script works in four stages:
 
@@ -94,7 +94,7 @@ def _make_wallet(path: Path, network: str, client: RpcClient) -> Wallet:
 
 
 def _amount(scar: int) -> str:
-    return f"{format_amount(scar)} SCT"
+    return f"{format_amount(scar)} WEED"
 
 
 def _max_split_outputs(params, input_count: int) -> int:
@@ -576,7 +576,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="two_wallet_tps",
         description="Send transactions between two wallets at a steady TPS rate.",
     )
-    parser.add_argument("--version", action="version", version=f"scarletcoin {__version__}")
+    parser.add_argument("--version", action="version", version=f"weed {__version__}")
 
     def add_common(sub: argparse.ArgumentParser) -> None:
         add_network_arguments(sub)

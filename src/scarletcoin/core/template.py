@@ -149,26 +149,26 @@ def create_block_template(
 
 @dataclass(frozen=True)
 class AuxBlockCandidate:
-    """A frozen ScarletCoin block template for merged-mining (AuxPoW).
+    """A frozen WEED block template for merged-mining (AuxPoW).
 
-    Once frozen, the candidate represents a specific ScarletCoin block header/hash
+    Once frozen, the candidate represents a specific WEED block header/hash
     that must be committed into the parent Bitcoin coinbase.  The candidate is
-    invalidated when the underlying ScarletCoin tip changes.
+    invalidated when the underlying WEED tip changes.
     """
 
     height: int
-    """The ScarletCoin block height this candidate targets."""
+    """The WEED block height this candidate targets."""
     prev_hash: bytes
-    """Hash of the previous ScarletCoin block (internal byte order)."""
+    """Hash of the previous WEED block (internal byte order)."""
     bits: int
-    """Compact target for ScarletCoin."""
+    """Compact target for WEED."""
     coinbase_value: int
     """Subsidy plus fees."""
     coinbase_hash: bytes
     """The coinbase transaction hash — this is what the parent coinbase must
     commit to through the auxiliary Merkle tree."""
     aux_block_hash: bytes
-    """The full ScarletCoin block hash (double SHA-256d of the 80-byte header,
+    """The full WEED block hash (double SHA-256d of the 80-byte header,
     internal byte order)."""
     chain_id: int
     """The AuxPoW chain ID of this network."""
@@ -187,7 +187,7 @@ class AuxBlockCandidate:
     pubkey_hash: bytes
     """The 20-byte pubkey hash that will receive the block reward."""
     transactions: tuple[Transaction, ...] = field(default_factory=tuple)
-    """The non-coinbase transactions to include in the ScarletCoin block."""
+    """The non-coinbase transactions to include in the WEED block."""
 
     def to_dict(self) -> dict:
         """Return a JSON-friendly representation, for RPC."""
@@ -207,7 +207,7 @@ class AuxBlockCandidate:
         }
 
     def build_block(self) -> Block:
-        """Reconstruct the full ScarletCoin block from this candidate.
+        """Reconstruct the full WEED block from this candidate.
 
         The rebuilt block is byte-identical to the one whose hash was frozen in
         :attr:`aux_block_hash`: same coinbase, same transactions, same bits,
@@ -240,16 +240,16 @@ def create_aux_block(
     pubkey_hash: bytes,
     timestamp: int | None = None,
 ) -> AuxBlockCandidate:
-    """Create a frozen AuxPoW candidate for the current ScarletCoin tip.
+    """Create a frozen AuxPoW candidate for the current WEED tip.
 
     The caller (a Bitcoin pool/proxy) must embed the returned commitment
-    information into the parent Bitcoin coinbase so that the ScarletCoin block
+    information into the parent Bitcoin coinbase so that the WEED block
     hash can be proved.
 
     Args:
-        chain: The ScarletCoin blockchain.
+        chain: The WEED blockchain.
         mempool: Optional mempool for including pending transactions.
-        pubkey_hash: The ScarletCoin address that will receive the SCT reward.
+        pubkey_hash: The WEED address that will receive the WEED reward.
         timestamp: Override timestamp; defaults to current time.
 
     Returns:
@@ -281,7 +281,7 @@ def create_aux_block(
         extra=b"auxpow",
     )
 
-    # Assemble the candidate ScarletCoin block.
+    # Assemble the candidate WEED block.
     candidate_block = Block.create(
         prev_hash=tip.hash,
         transactions=[coinbase, *transactions],

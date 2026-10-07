@@ -1,6 +1,6 @@
 """Reference merged-mining coordinator.
 
-Talks to a ScarletCoin node (``createauxblock`` / ``submitauxblock``) and
+Talks to a WEED node (``createauxblock`` / ``submitauxblock``) and
 simulates a Bitcoin parent chain so a regtest or testnet deployment can exercise
 the full AuxPoW flow without needing a real Bitcoin node.
 
@@ -91,7 +91,7 @@ class ParentChain:
 
 
 class MergedMiningCoordinator:
-    """Coordinates merged mining between a ScarletCoin node and a parent chain.
+    """Coordinates merged mining between a WEED node and a parent chain.
 
     Usage::
 
@@ -108,9 +108,9 @@ class MergedMiningCoordinator:
     def mine_one_block(self, pubkey_hash: bytes) -> dict | None:
         """Run one complete merged-mining cycle and return the submission result.
 
-        Returns ``None`` when the parent proof did not meet the SCT target.
+        Returns ``None`` when the parent proof did not meet the WEED target.
         """
-        # 1. Get ScarletCoin aux work -------------------------------------------
+        # 1. Get WEED aux work -------------------------------------------
         aux = self.scarlet.call("createauxblock", pubkey_hash.hex())  # type: ignore[arg-type]
         sct_target = int(aux["target"], 16)
         sct_hash = bytes.fromhex(aux["hash"])[::-1]
@@ -138,7 +138,7 @@ class MergedMiningCoordinator:
             parent_header=solved_header,
         )
 
-        # 6. Submit to ScarletCoin -----------------------------------------------
+        # 6. Submit to WEED -----------------------------------------------
         return self.scarlet.call("submitauxblock", aux["hash"], auxpow.serialize().hex())  # type: ignore[arg-type]
 
     # ── helpers ──────────────────────────────────────────────────────────
@@ -178,7 +178,7 @@ class MergedMiningCoordinator:
 # ── demonstration entry point ────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    """Demonstrate merged mining against a local regtest ScarletCoin node.
+    """Demonstrate merged mining against a local regtest WEED node.
 
     Start the node first::
 
@@ -204,14 +204,14 @@ if __name__ == "__main__":
         print("No payout address given — rewards will be burned")
         print("Usage: python -m tools.merged_mining.coordinator <address>")
 
-    print("Connecting to ScarletCoin regtest node...")
+    print("Connecting to WEED regtest node...")
     scarlet = RpcClient("http://127.0.0.1:40332", timeout=30.0)
 
     try:
         info = scarlet.call("getinfo")
         print(f"Connected to {info['network']} at height {info['height']}")
     except Exception as exc:
-        print(f"Cannot reach ScarletCoin node: {exc}")
+        print(f"Cannot reach WEED node: {exc}")
         print("Start one with: scarletcoin node regtest --rpc")
         sys.exit(1)
 

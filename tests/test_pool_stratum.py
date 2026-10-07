@@ -12,18 +12,18 @@ import asyncio
 import json
 
 import pytest
-from pool.scarlet_pool.coinbase import (
+from pool.weed_pool.coinbase import (
     MAX_COINBASE_DATA,
     CoinbaseBuilder,
     coinbase_merkle_branch,
     parse_coinbase_body,
 )
-from pool.scarlet_pool.jobs import (
+from pool.weed_pool.jobs import (
     _DIFF1_TARGET,
     DEFAULT_SHARE_EASE,
     JobManager,
 )
-from pool.scarlet_pool.server import SimulatedParentChain, StratumServer
+from pool.weed_pool.server import SimulatedParentChain, StratumServer
 
 from scarletcoin.core.block import merkle_root
 from scarletcoin.core.coinbase import build_coinbase
@@ -110,7 +110,7 @@ def _solve(
 def _manager(node, client, address, **kwargs) -> JobManager:
     return JobManager(
         bitcoin=SimulatedParentChain(),
-        scarlet=client,
+        weed=client,
         payout_address=address,
         chain_id=node.params.auxpow_chain_id,
         share_difficulty=kwargs.pop("share_difficulty", 1e-9),
@@ -273,22 +273,22 @@ class TestJobManager:
         node, _server, client = rpc
         manager = _manager(node, client, str(key.address(node.params.address_version)))
         job = manager.refresh()
-        assert job.scarlet.chain_id == node.params.auxpow_chain_id
-        assert job.scarlet.height == node.chain.height + 1
+        assert job.weed.chain_id == node.params.auxpow_chain_id
+        assert job.weed.height == node.chain.height + 1
 
     def test_share_difficulty_tracks_the_chain_by_default(self, rpc, key):
         """With no explicit difficulty the share rate follows the chain target."""
         node, _server, client = rpc
         manager = JobManager(
             bitcoin=SimulatedParentChain(),
-            scarlet=client,
+            weed=client,
             payout_address=str(key.address(node.params.address_version)),
             chain_id=node.params.auxpow_chain_id,
         )
         job = manager.refresh()
-        assert manager.share_target == job.scarlet.target * DEFAULT_SHARE_EASE
+        assert manager.share_target == job.weed.target * DEFAULT_SHARE_EASE
         # Easier than a block, so shares arrive more often than blocks.
-        assert manager.share_target > job.scarlet.target
+        assert manager.share_target > job.weed.target
         assert manager.share_difficulty == pytest.approx(_DIFF1_TARGET / manager.share_target)
 
     def test_an_explicit_share_difficulty_pins_the_target(self, rpc, key):
@@ -301,7 +301,7 @@ class TestJobManager:
         node, _server, client = rpc
         manager = JobManager(
             bitcoin=SimulatedParentChain(),
-            scarlet=client,
+            weed=client,
             payout_address=str(key.address(node.params.address_version)),
             chain_id=1,  # the regtest node reports 3
             share_difficulty=1e-9,
@@ -343,9 +343,9 @@ class TestJobManager:
                 branches=job.merkle_branches,
                 ntime=job.ntime,
                 nbits=job.parent.nbits,
-                target=min(job.scarlet.target, manager.share_target),
+                target=min(job.weed.target, manager.share_target),
             )
-            result = manager.submit_sct_block(job, en1, en2, job.ntime, nonce)
+            result = manager.submit_weed_block(job, en1, en2, job.ntime, nonce)
             assert result is not None and result["status"] == "connected", result
             block = node.chain.storage.get_block(node.chain.tip_hash)
             paid = block.transactions[0].outputs[0].payload
@@ -353,7 +353,7 @@ class TestJobManager:
 
         assert mine_with(first) == str(first)
         assert mine_with(second) == str(second)
-        assert manager.sct_blocks_accepted == 2
+        assert manager.weed_blocks_accepted == 2
 
     def test_an_older_job_is_still_judged_against_its_own_coinbase(self, rpc, key):
         """Every miner holds its own job, so a job must not be rejected merely
@@ -383,17 +383,17 @@ class TestJobManager:
             nbits=job.parent.nbits,
             # Beat whichever target is harder: the pool's share target or the
             # chain's block target.
-            target=min(job.scarlet.target, manager.share_target),
+            target=min(job.weed.target, manager.share_target),
         )
 
         share = manager.process_share(job, en1, en2, job.ntime, nonce)
         assert share.accepted is True, share.reason
-        assert share.meets_sct_target is True
+        assert share.meets_weed_target is True
 
-        result = manager.submit_sct_block(job, en1, en2, job.ntime, nonce)
+        result = manager.submit_weed_block(job, en1, en2, job.ntime, nonce)
         assert result is not None
         assert result["status"] == "connected"
-        assert manager.sct_blocks_accepted == 1
+        assert manager.weed_blocks_accepted == 1
         assert node.chain.height == 1
 
     def test_a_stale_candidate_is_reported_and_not_raised(self, rpc, key, monkeypatch):
@@ -411,18 +411,18 @@ class TestJobManager:
             branches=job.merkle_branches,
             ntime=job.ntime,
             nbits=job.parent.nbits,
-            target=min(job.scarlet.target, manager.share_target),
+            target=min(job.weed.target, manager.share_target),
         )
 
         def stale(*_args, **_kwargs):
             raise RpcClientError("no AuxPoW candidate with that hash; the tip advanced")
 
         monkeypatch.setattr(client, "call", stale)
-        result = manager.submit_sct_block(job, en1, en2, job.ntime, nonce)
+        result = manager.submit_weed_block(job, en1, en2, job.ntime, nonce)
         assert result is not None
         assert result["status"] == "rejected"
-        assert manager.sct_blocks_rejected == 1
-        assert manager.sct_blocks_accepted == 0
+        assert manager.weed_blocks_rejected == 1
+        assert manager.weed_blocks_accepted == 0
 
     def test_a_share_below_the_share_target_is_rejected(self, rpc, key):
         """A share difficulty that is too high rejects work even if a block would qualify."""
@@ -564,7 +564,7 @@ class TestStratumWireProtocol:
         stratum = StratumServer(host="127.0.0.1", port=0, manager=manager, job_interval=3600)
         asyncio.run(self._run(stratum, manager))
         assert node.chain.height == 1
-        assert manager.sct_blocks_accepted == 1
+        assert manager.weed_blocks_accepted == 1
 
     async def _run(
         self, stratum: StratumServer, manager: JobManager, *, expect_refresh: bool = False
@@ -613,7 +613,7 @@ class TestStratumWireProtocol:
                     branches=branches,
                     ntime=int(ntime, 16),
                     nbits=int(nbits, 16),
-                    target=min(job.scarlet.target, manager.share_target),
+                    target=min(job.weed.target, manager.share_target),
                 )
 
                 await _send(

@@ -1,6 +1,6 @@
 """BIP-0032 hierarchical deterministic key derivation for secp256k1.
 
-ScarletCoin uses ``hash256`` instead of ``hash160`` for key fingerprints, which
+WEED uses ``hash256`` instead of ``hash160`` for key fingerprints, which
 is the same deliberate deviation already made for addresses (see
 :mod:`scarletcoin.crypto.hashing`).  Everything else follows BIP-0032 exactly,
 so the test vectors agree on chain codes, keys and derived public keys; only the

@@ -86,7 +86,7 @@ static void sha256(const unsigned char *data, size_t len, unsigned char out[32])
  * The header's nonce field (bytes 76..79) is overwritten on each iteration. A
  * hash solves the block when, read as a little-endian integer, it is <= target.
  */
-long long scarlet_scan_nonces(const unsigned char *header, const unsigned char *target,
+long long weed_scan_nonces(const unsigned char *header, const unsigned char *target,
                               unsigned int start, unsigned int count) {
     unsigned char first[64];
     unsigned char block[64];

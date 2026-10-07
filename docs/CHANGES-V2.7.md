@@ -1,4 +1,4 @@
-# ScarletCoin 2.7.0
+# WEED 2.7.0
 
 This release makes the built-in block explorer answer the question a visitor
 actually arrives with — *is this chain carrying any traffic?* — and fixes a
@@ -34,7 +34,7 @@ value and the whole range is readable at once.
 No consensus change, no chain change, no wallet-file change.  The new RPC
 fields are additive, and a client that does not know them ignores them.
 
-# ScarletCoin 2.7.1
+# WEED 2.7.1
 
 Three fixes found by running a transaction generator against the live mainnet
 node.
@@ -68,7 +68,7 @@ No consensus change, no chain change, no wallet-file change.  Existing
 databases pick the new index up on the next start; building it is a one-off
 cost, not a migration.
 
-# ScarletCoin 2.7.2
+# WEED 2.7.2
 
 A follow-up to 2.7.1's miner fix, found by working through what the idle
 actually does on a solo-mined chain.
@@ -87,7 +87,7 @@ that also drops the mining CPU from a full core to a fraction of one.
 ## Upgrading
 
 No consensus change, no chain change, no wallet-file change.
-# ScarletCoin 2.7.3
+# WEED 2.7.3
 
 ## The block cache no longer keeps the whole recent chain resident
 
@@ -108,7 +108,7 @@ millisecond, which is a good trade on the small hosts this node runs on.
 No consensus change, no chain change, no wallet-file change.  The smaller
 cache is purely in memory; nothing on disk changes.
 
-# ScarletCoin 2.7.4
+# WEED 2.7.4
 
 ## A sweep signs the same key once, not once per coin
 
@@ -125,7 +125,7 @@ of small coins, which is exactly what the fake-traffic generator does.
 
 No consensus change, no chain change, no wallet-file change.
 
-# ScarletCoin 2.7.5
+# WEED 2.7.5
 
 The chain database was about three times the size of the chain itself.  None
 of that extra was consensus data: it was derived indexes and undo records,
@@ -170,7 +170,7 @@ databases are upgraded in place on first start: the migration adds
 `blocks.tx_count`, drops the two indexes and prunes old undo.  It can take a
 few seconds; follow it with `vacuum` to reclaim the freed pages.
 
-# ScarletCoin 2.7.6
+# WEED 2.7.6
 
 ## A transaction page no longer resolves every input
 

@@ -37,7 +37,7 @@ These alter the transaction or block rules and required re-mining the genesis.
 * **Outputs** gained a type byte (`uint8`, `0 = P2PKH`, `1 = P2SH`) before the
   value, and the 20-byte field is now a *hash* (public-key hash or script hash)
   instead of always a public-key hash.
-* The signature hash was bumped to `ScarletCoin/sighash/2` and now also commits
+* The signature hash was bumped to `WEED/sighash/2` and now also commits
   to a `script_code`: the type-and-hash of a P2PKH output, or the full redeem
   script of a P2SH output.
 
@@ -47,7 +47,7 @@ A small, non-Turing-complete bytecode interpreter supports `OP_DUP`,
 `OP_HASH160`, `OP_EQUAL`, `OP_EQUALVERIFY`, `OP_CHECKSIG`, `OP_CHECKMULTISIG`
 and the data-push opcodes. `OP_CHECKMULTISIG` uses a clean stack layout (no
 dummy element), `m` and `n` bounded to 1…16 and 1…15 keys, redeem scripts capped
-at 520 bytes. `OP_HASH160` uses ScarletCoin's `hash256[:20]` convention.
+at 520 bytes. `OP_HASH160` uses WEED's `hash256[:20]` convention.
 
 ### Replace-by-fee (`core/mempool.py`, `core/transaction.py`)
 
@@ -93,7 +93,7 @@ the RFC 6979 §A.2.5 secp256k1 vector in `tests/test_crypto.py`.
 * `bip32.py` — BIP-0032 extended keys: master key derivation, hardened and
   non-hardened `CKDpriv`/`CKDpub`, `xprv`/`xpub` serialisation, and
   `m/…'` path parsing. Uses `ecdsa` for the elliptic-curve point arithmetic.
-* Key fingerprints use `hash256(pubkey)[:4]` (ScarletCoin's `hash160`
+* Key fingerprints use `hash256(pubkey)[:4]` (WEED's `hash160`
   convention), which is the one deliberate deviation from BIP-0032.
 
 ### Wallet format 2 (`wallet/keystore.py`, `wallet/cli.py`, `gui/wallet_app.py`)
@@ -101,8 +101,8 @@ the RFC 6979 §A.2.5 secp256k1 vector in `tests/test_crypto.py`.
 The wallet now stores an encrypted BIP-0039 seed and derives addresses along
 `m/44'/coin_type'/0'/0/i`, instead of a list of independent WIF keys. Version 1
 wallets still load and are written back as version 2 with their old keys kept as
-imported keys. `scarlet-wallet create` prints the 12-word recovery phrase once,
-and a new `scarlet-wallet restore PHRASE` command rebuilds a wallet from it.
+imported keys. `weed-wallet create` prints the 12-word recovery phrase once,
+and a new `weed-wallet restore PHRASE` command rebuilds a wallet from it.
 
 ## Networking
 
@@ -150,7 +150,7 @@ C source and the wordlist so PyInstaller builds carry both.
   reported in `getinfo` under `ws_port`.
 * **Explorer favicon** — the browser wallet's icon is served at `/icon.svg` and
   `/favicon.ico`.
-* **`sweep`** — already expressible as `scarlet-wallet send ADDRESS all` via
+* **`sweep`** — already expressible as `weed-wallet send ADDRESS all` via
   `Wallet.send_everything`; no new command was needed.
 * `validateaddress` now recognises P2SH addresses and reports the type.
 
@@ -182,7 +182,7 @@ genesis blocks were re-mined with `tools/mine_genesis.py`:
 
 Old databases are incompatible: the storage migration drops every table and the
 chain restarts from the new genesis. The reference public node
-(`scarletcoin.remotewire.net`) must have its database deleted and be restarted.
+(`WEED public node`) must have its database deleted and be restarted.
 
 ## Dependencies
 
@@ -191,7 +191,7 @@ chain restarts from the new genesis. The reference public node
 * Added `websockets` (pure Python, for the explorer's live-update endpoint).
 * Added `hypothesis` to the development group.
 * Version bumped to `2.2.0` in both `pyproject.toml` and
-  `src/scarletcoin/__init__.py`.
+  the project's Python package.
 
 ## Compatibility
 
@@ -211,7 +211,7 @@ used where the extra curve primitives were actually needed (BIP-0032).
 
 ## Sibling projects
 
-The browser wallet (`scarletcoin-web-wallet`) was updated in step: its
+The browser wallet (`weed-web-wallet`) was updated in step: its
 transaction serialisation, signature hash and coinbase building now match the
 new format (sequence numbers, typed outputs, witness stacks, `sighash/2`), and
 its golden fixtures were regenerated so the two implementations still agree

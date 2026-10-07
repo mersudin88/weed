@@ -140,7 +140,7 @@ class Block:
 
     May optionally carry an :class:`~scarletcoin.core.auxpow.AuxPoW` payload for
     merged-mined blocks.  The AuxPoW is stored separately from the header so that
-    the ScarletCoin block hash is not affected by it.
+    the WEED block hash is not affected by it.
     """
 
     header: BlockHeader
@@ -222,7 +222,7 @@ class Block:
 
         Layout::
 
-            [ScarletCoin header  (80 bytes)]
+            [WEED header  (80 bytes)]
             [transaction count  (varint)]
             [transactions …]
             [AuxPoW marker]         0x01 = AuxPoW payload follows (optional)

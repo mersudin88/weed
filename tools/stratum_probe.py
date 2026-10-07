@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Probe a Stratum merged-mining bridge end to end.
 
-Speaks Stratum V1 to a ScarletCoin pool exactly as stock Bitcoin ASIC firmware
+Speaks Stratum V1 to a WEED pool exactly as stock Bitcoin ASIC firmware
 does — subscribe, authorize, take a job, assemble the coinbase, fold the Merkle
 branch, grind a nonce, submit it — and reports whether the pool accepted it and
 whether the chain actually advanced.
@@ -212,7 +212,7 @@ def rpc(url: str, method: str, params: list, timeout: float = 15.0) -> object:
 
 
 def _block_target(args: argparse.Namespace, difficulty: float) -> int:
-    """The target a parent header must beat to produce a ScarletCoin block.
+    """The target a parent header must beat to produce a WEED block.
 
     Prefers the node's own candidate, which is authoritative.  Falls back to
     deriving it from the share difficulty the pool advertised.
@@ -249,13 +249,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--rpc-url",
-        default="http://127.0.0.1:20332",
-        help="ScarletCoin node RPC URL, used to read the exact block target",
+        default="http://127.0.0.1:28332",
+        help="WEED node RPC URL, used to read the exact block target",
     )
     parser.add_argument(
         "--payout-address",
         default="",
-        help="SCT address to ask the node for a candidate (any valid address works)",
+        help="WEED address to ask the node for a candidate (any valid address works)",
     )
     parser.add_argument(
         "--share-ease",
@@ -298,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"share difficulty: {difficulty:g}")
 
         # The parent chain is simulated, so the job's prevhash has nothing to
-        # do with the ScarletCoin tip; the target has to come from the node's
+        # do with the WEED tip; the target has to come from the node's
         # own candidate.  Fetch a job, read the target that goes with the tip
         # the node is on, grind, submit, and retry if the tip moved underneath
         # us - which is routine, because native mining keeps producing blocks.

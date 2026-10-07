@@ -27,7 +27,7 @@ directory.
 
 ## Things that stayed
 
-* The name, the ticker (SCT), the scarlet colour scheme, and the idea of shipping
+* The name, the ticker (WEED), the original colour scheme, and the idea of shipping
   a node, a wallet and a miner together.
 * Base58Check addresses, and mining as the way coins come into existence.
 * The MIT licence.

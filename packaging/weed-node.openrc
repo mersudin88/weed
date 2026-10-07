@@ -1,20 +1,20 @@
 #!/sbin/openrc-run
 
-name="scarlet-node"
-description="ScarletCoin node"
+name="weed-node"
+description="WEED node"
 
-# -- Tunables (set in /etc/conf.d/scarlet-node) -------------------------
+# -- Tunables (set in /etc/conf.d/weed-node) -------------------------
 : ${network:=mainnet}
-: ${datadir:=/var/lib/scarletcoin}
-: ${p2p_port:=20333}
+: ${datadir:=/var/lib/weed}
+: ${p2p_port:=28333}
 : ${rpc_host:=127.0.0.1}
-: ${rpc_port:=20332}
+: ${rpc_port:=28332}
 # Public mining exposes createauxblock / submitauxblock / getblocktemplate /
 # submitblock without a token, which is what lets a Stratum bridge -- or any
 # other merged-mining pool -- build proofs against this node.
 : ${rpc_public_mining:=yes}
 # A peer to fall back on when the seed list is not used.
-: ${public_peer:=http://74.113.235.48:20332}
+: ${public_peer:=http://74.113.235.48:28332}
 # How many createauxblock candidates to keep.
 #
 # A bridge that pays every miner its own address asks for one candidate per
@@ -40,20 +40,20 @@ if [ "${rpc_public_mining}" = "yes" ]; then
     mining_flag="--rpc-public-mining"
 fi
 
-command="/opt/scarletcoin/.venv/bin/scarlet-node"
+command="/opt/weed/.venv/bin/weed-node"
 command_args="--network ${network} --datadir ${datadir}
     --p2p-port ${p2p_port}
     --rpc-host ${rpc_host} --rpc-port ${rpc_port}
     ${mining_flag}
     --no-seeds ${public_peer:+--public-peer ${public_peer}}
     ${aux_flag}"
-command_user="scarlet:scarlet"
+command_user="weed:weed"
 
 supervisor="supervise-daemon"
 respawn_delay=5
 respawn_max=0
-output_log="/var/log/scarletcoin/node.log"
-error_log="/var/log/scarletcoin/node.log"
+output_log="/var/log/weed/node.log"
+error_log="/var/log/weed/node.log"
 
 depend() {
     need net
@@ -61,5 +61,5 @@ depend() {
 }
 
 start_pre() {
-    checkpath -d -o scarlet:scarlet -m 0750 "${datadir}" /var/log/scarletcoin
+    checkpath -d -o weed:weed -m 0750 "${datadir}" /var/log/weed
 }
