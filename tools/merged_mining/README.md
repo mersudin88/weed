@@ -33,7 +33,7 @@ The ASIC performs the same hashing work it always does. The pool/proxy:
 
 Terminal 1 — start a WEED regtest node:
 ```
-scarletcoin node regtest --rpc
+weed-node run --network regtest --rpc
 ```
 
 Terminal 2 — run the coordinator:

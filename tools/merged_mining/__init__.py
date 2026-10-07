@@ -112,18 +112,18 @@ class MergedMiningCoordinator:
         """
         # 1. Get WEED aux work -------------------------------------------
         aux = self.scarlet.call("createauxblock", pubkey_hash.hex())  # type: ignore[arg-type]
-        sct_target = int(aux["target"], 16)
-        sct_hash = bytes.fromhex(aux["hash"])[::-1]
+        weed_target = int(aux["target"], 16)
+        weed_hash = bytes.fromhex(aux["hash"])[::-1]
 
         # 2. Build the merged-mining commitment ---------------------------------
-        commitment = build_auxpow_commitment(sct_hash, tree_size=1, nonce=aux["nonce"])
+        commitment = build_auxpow_commitment(weed_hash, tree_size=1, nonce=aux["nonce"])
 
         # 3. Build the parent Bitcoin coinbase ----------------------------------
         parent_cb = self._build_parent_coinbase(commitment)
 
         # 4. Build the parent header (Merkle root commits to coinbase) ----------
         header_bytes = self.parent.build_block(parent_cb)
-        solved = self.parent.solve(header_bytes, sct_target)
+        solved = self.parent.solve(header_bytes, weed_target)
 
         # 5. Assemble AuxPoW proof ----------------------------------------------
         from scarletcoin.core.auxpow import ParentBlockHeader
@@ -182,7 +182,7 @@ if __name__ == "__main__":
 
     Start the node first::
 
-        scarletcoin node regtest --rpc
+        weed-node run --network regtest --rpc
 
     Then run this script::
 
@@ -212,7 +212,7 @@ if __name__ == "__main__":
         print(f"Connected to {info['network']} at height {info['height']}")
     except Exception as exc:
         print(f"Cannot reach WEED node: {exc}")
-        print("Start one with: scarletcoin node regtest --rpc")
+        print("Start one with: weed-node run --network regtest --rpc")
         sys.exit(1)
 
     mm = MergedMiningCoordinator(scarlet)
