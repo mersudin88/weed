@@ -229,7 +229,7 @@ MAINNET = ChainParams(
     # the rest of the network by gossip. Port 28333 is assumed when omitted.
     # The literal address is a fallback for when DNS is broken, filtered, or
     # answered by a proxy that cannot carry the peer-to-peer protocol.
-    seeds=(),
+    seeds=("37.203.104.231:28333",),
     # Nodes that serve the public RPC methods over HTTPS, so a wallet or a miner
     # can be useful before it has a chain of its own. Whichever of these answers
     # first is asked for the others, so this list only has to get a client
