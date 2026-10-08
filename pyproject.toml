@@ -1,6 +1,6 @@
 [project]
 name = "weed"
-version = "2.7.6"
+version = "2.7.7"
 description = "WEED: a small but complete proof-of-work cryptocurrency with a real blockchain, peer-to-peer nodes, wallet and miner."
 readme = "README.md"
 license = { file = "LICENSE" }
