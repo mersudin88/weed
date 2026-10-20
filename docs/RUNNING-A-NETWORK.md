@@ -76,7 +76,7 @@ two host names, and from then on new nodes bootstrap from them automatically.
 `mainnet` ships with one published seed:
 
 ```python
-    seeds=("WEED public node", "45.126.126.139"),
+    seeds=("WEED public node", "REMOVED_OLD_SEED"),
     public_nodes=("https://WEED public node",),
 ```
 
@@ -98,7 +98,7 @@ the seed being up.
 ## Worked example: Alpine Linux, Caddy and a DDNS name
 
 This is the exact recipe for the reference node: an Alpine server at
-`45.126.126.139`, reachable as `WEED public node`, with Caddy already
+`REMOVED_OLD_SEED`, reachable as `WEED public node`, with Caddy already
 installed and serving the explorer over HTTPS.
 
 The finished layout:
@@ -121,7 +121,7 @@ The finished layout:
 
 ### 1. Point the name at the server, with no proxy in between
 
-`WEED public node` must be a plain `A` record for `45.126.126.139`. If
+`WEED public node` must be a plain `A` record for `REMOVED_OLD_SEED`. If
 your DNS provider offers HTTP proxying (Cloudflare's orange cloud, for example),
 **turn it off** for this record: a proxy would break port 28333 and answer with
 its own address instead of yours.
@@ -129,7 +129,7 @@ its own address instead of yours.
 Check from somewhere that is not the server:
 
 ```sh
-dig +short WEED public node      # must print 45.126.126.139
+dig +short WEED public node      # must print REMOVED_OLD_SEED
 ```
 
 At the time of writing this name answered `138.199.60.12`, so the record still
@@ -413,7 +413,7 @@ else there.
 Run all of these from a *different* machine:
 
 ```sh
-dig +short WEED public node              # 45.126.126.139
+dig +short WEED public node              # REMOVED_OLD_SEED
 nc -vz WEED public node 28333            # open  (peers)
 nc -vz WEED public node 28332            # refused/filtered (correct!)
 curl -sI https://WEED public node | head -1
@@ -439,7 +439,7 @@ cd /opt/weed
 .venv/bin/weed-node rpc  --network mainnet --datadir /var/lib/weed getpeers
 
 # or from your laptop, over SSH, without exposing anything
-ssh -L 28332:127.0.0.1:28332 root@45.126.126.139
+ssh -L 28332:127.0.0.1:28332 root@REMOVED_OLD_SEED
 ```
 
 Upgrades:

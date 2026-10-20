@@ -1,7 +1,7 @@
 """Stratum V1 TCP server for merged-mining Bitcoin ASICs.
 
 Accepts connections from standard SHA-256 ASIC miners (Antminer, Whatsminer,
-Avalon, …), hands out jobs whose parent coinbase carries the WEED
+Avalon, Ã¢â‚¬Â¦), hands out jobs whose parent coinbase carries the WEED
 AuxPoW commitment, and submits an AuxPoW proof whenever a share also meets the
 WEED target.
 
@@ -21,16 +21,23 @@ Usage::
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import asyncio
 import contextlib
 import logging
 import os
+import time
+from collections import deque
+from collections import deque
 from collections.abc import Awaitable, Callable
 
 from scarletcoin.crypto.keys import Address, InvalidKeyError
 from scarletcoin.net.client import RpcClient
 
 from .coinbase import CoinbaseBuilder
+from .native import NativeJobManager
 from .jobs import JobManager, ParentChainClient, ParentTemplate, _ActiveJob
 from .stratum import (
     DEFAULT_READ_TIMEOUT,
@@ -40,6 +47,130 @@ from .stratum import (
     encode_message,
     read_message,
 )
+
+
+_STATS_PATH = Path("/home/server/weed-linux/pool/dashboard/stats.json")
+_STATS = {"accepted_shares": 0, "rejected_shares": 0, "blocks_found": 0}
+_MINER_COUNTS = {}
+_ACTIVE_MINERS = {}
+_HASHRATE_WINDOW_SECONDS = 600
+_SHARE_SAMPLES = {}
+
+def _stats_key(session):
+    return session.payout_address + "\x1f" + session.worker_name
+
+def _stats_load():
+    try:
+        data = json.loads(_STATS_PATH.read_text(encoding="utf-8"))
+        for name in ("accepted_shares", "rejected_shares", "blocks_found"):
+            _STATS[name] = max(0, int(data.get(name, 0)))
+        for miner in data.get("miners", []):
+            address = str(miner.get("address", ""))
+            worker = str(miner.get("worker", ""))
+            if address:
+                key = address + "\x1f" + worker
+                _MINER_COUNTS[key] = {
+                    "address": address,
+                    "worker": worker,
+                    "accepted_shares": max(0, int(miner.get("accepted_shares", 0))),
+                    "rejected_shares": max(0, int(miner.get("rejected_shares", 0))),
+                }
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+
+_stats_load()
+
+def _stats_publish():
+    try:
+        now = time.time()
+        online_keys = set(_ACTIVE_MINERS.values())
+        miners = []
+        total_hashrate = 0.0
+
+        for key, item in _MINER_COUNTS.items():
+            samples = _SHARE_SAMPLES.setdefault(key, deque())
+
+            while samples and now - samples[0][0] > _HASHRATE_WINDOW_SECONDS:
+                samples.popleft()
+
+            hashrate = sum(
+                difficulty * (2 ** 32)
+                for timestamp, difficulty in samples
+            ) / _HASHRATE_WINDOW_SECONDS
+
+            total_hashrate += hashrate
+            row = dict(item)
+            row.update({
+                "hashrate_hs": int(hashrate),
+                "online": key in online_keys,
+            })
+            miners.append(row)
+
+        data = {
+            "active_miners": len(_ACTIVE_MINERS),
+            "hashrate_hs": int(total_hashrate),
+            "accepted_shares": _STATS["accepted_shares"],
+            "rejected_shares": _STATS["rejected_shares"],
+            "blocks_found": _STATS["blocks_found"],
+            "miners": miners,
+        }
+        _STATS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        temp = _STATS_PATH.with_name("stats.json.tmp")
+        temp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        temp.replace(_STATS_PATH)
+    except Exception:
+        logger.exception("Dashboard statistics write failed")
+
+
+def _stats_authorize(session):
+    _ACTIVE_MINERS.pop(id(session), None)
+    key = _stats_key(session)
+    _MINER_COUNTS.setdefault(key, {
+        "address": session.payout_address,
+        "worker": session.worker_name,
+        "accepted_shares": 0,
+        "rejected_shares": 0,
+    })
+    _ACTIVE_MINERS[id(session)] = key
+    _stats_publish()
+
+def _stats_disconnect(session):
+    _ACTIVE_MINERS.pop(id(session), None)
+    _stats_publish()
+
+def _stats_share(session, accepted):
+    if not session.authorized or not session.payout_address:
+        return
+
+    key = _stats_key(session)
+    item = _MINER_COUNTS.setdefault(key, {
+        "address": session.payout_address,
+        "worker": session.worker_name,
+        "accepted_shares": 0,
+        "rejected_shares": 0,
+    })
+
+    field = "accepted_shares" if accepted else "rejected_shares"
+    _STATS[field] += 1
+    item[field] += 1
+
+    if accepted:
+        try:
+            difficulty = float(session._manager.share_difficulty)
+            if 0 < difficulty < float("inf"):
+                _SHARE_SAMPLES.setdefault(key, deque()).append(
+                    (time.time(), difficulty)
+                )
+        except (AttributeError, TypeError, ValueError, ZeroDivisionError):
+            logger.debug("Could not calculate share hashrate", exc_info=True)
+
+    _stats_publish()
+
+
+def _stats_block():
+    _STATS["blocks_found"] += 1
+    _stats_publish()
+
 
 __all__ = ["SimulatedParentChain", "StratumServer", "StratumSession", "create_server"]
 
@@ -54,7 +185,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_SHARE_DIFFICULTY: float | None = None
 
 
-# ── simulated parent chain (WEED-only mining, testing) ────────────────────
+# Ã¢â€â‚¬Ã¢â€â‚¬ simulated parent chain (WEED-only mining, testing) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 
 class SimulatedParentChain:
@@ -123,7 +254,7 @@ def payout_address_from_worker(worker: str) -> str | None:
     return candidate
 
 
-# ── Stratum session (one per connected miner) ────────────────────────────
+# Ã¢â€â‚¬Ã¢â€â‚¬ Stratum session (one per connected miner) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 
 class StratumSession:
@@ -163,23 +294,24 @@ class StratumSession:
         self.payout_address: str = ""
         self.job: _ActiveJob | None = None
 
-    # ── lifecycle ──────────────────────────────────────────────────────
+    # Ã¢â€â‚¬Ã¢â€â‚¬ lifecycle Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     async def run(self) -> None:
         """Read-submit loop for one miner."""
         try:
             while True:
                 line = await read_message(self._reader, self._read_timeout)
+                logger.info("STRATUM RX from %s: %s", self.address, line[:500])
                 try:
                     req = StratumRequest.parse(line)
                 except StratumError as exc:
                     await self._send_error(None, -32700, str(exc))
                     continue
                 await self._dispatch(req)
-        except StratumError:
-            pass  # connection closed or timed out
-        except (ConnectionError, asyncio.IncompleteReadError, OSError):
-            pass
+        except StratumError as exc:
+            logger.warning("STRATUM session ended for %s: %s", self.address, exc)
+        except (ConnectionError, asyncio.IncompleteReadError, OSError) as exc:
+            logger.warning("STRATUM socket error for %s: %r", self.address, exc)
         finally:
             self._on_disconnect(self)
             with contextlib.suppress(Exception):
@@ -201,7 +333,7 @@ class StratumSession:
         }:
             await self._send_result(req.id, True)
         elif method == "mining.configure":
-            # Advertise no optional extensions; miners fall back to V1 basics.
+            logger.info("STRATUM configure request params=%r", req.params)
             await self._send_result(req.id, {"version-rolling": False})
         elif method in {"mining.multi_version", "client.get_version"}:
             await self._send_result(req.id, True)
@@ -213,16 +345,21 @@ class StratumSession:
         job = self.job
         if job is None:
             return
+        if isinstance(self._manager, NativeJobManager):
+            prev_hash = CoinbaseBuilder.stratum_prevhash(job.parent.prev_hash)
+        else:
+            prev_hash = CoinbaseBuilder.stratum_prevhash(job.parent.prev_hash)
+
         msg = encode_message(
             {
                 "id": None,
                 "method": "mining.notify",
                 "params": [
                     job.job_id,
-                    CoinbaseBuilder.stratum_prevhash(job.parent.prev_hash),
+                    prev_hash,
                     job.coinbase.coinbase1,
                     job.coinbase.coinbase2,
-                    job.merkle_branches,  # internal order
+                    job.merkle_branches,
                     f"{job.parent.version:08x}",
                     f"{job.parent.nbits:08x}",
                     f"{job.ntime:08x}",
@@ -234,12 +371,13 @@ class StratumSession:
 
     async def _write(self, payload: str) -> None:
         try:
+            logger.info("STRATUM TX to %s: %s", self.address, payload.strip()[:500])
             self._writer.write(payload.encode())
             await asyncio.wait_for(self._writer.drain(), timeout=5.0)
         except Exception as exc:
             raise StratumError("write failed") from exc
 
-    # ── handlers ──────────────────────────────────────────────────────
+    # Ã¢â€â‚¬Ã¢â€â‚¬ handlers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     async def _handle_subscribe(self, req: StratumRequest) -> None:
         if len(req.params) >= 1:
@@ -308,6 +446,7 @@ class StratumSession:
         self.worker_name = worker
         self.payout_address = address
         self.authorized = True
+        _stats_authorize(self)
         logger.info("worker %s authorized, mining to %s", worker, address)
         await self._send_result(req.id, True)
         await self._refresh_own_job()
@@ -348,10 +487,23 @@ class StratumSession:
         job = self.job
         if job is None or job.job_id != job_id:
             logger.debug("share rejected from %s: stale job", worker or self.address)
+            _stats_share(self, False)
             await self._send_result(req.id, False)
             return
 
         share = self._manager.process_share(job, self.extranonce1, extranonce2, ntime, nonce)
+
+        if isinstance(self._manager, NativeJobManager) and not share.accepted:
+            logger.debug(
+                "native share rejected from %s: %s",
+                worker or self.address,
+                share.reason,
+            )
+            _stats_share(self, False)
+            await self._send_result(req.id, False)
+            return
+
+        _stats_share(self, True)
 
         landed = False
         if share.meets_weed_target:
@@ -363,11 +515,19 @@ class StratumSession:
             result = self._manager.submit_weed_block(
                 job, self.extranonce1, extranonce2, ntime, nonce
             )
-            if result and result.get("status") == "connected":
-                logger.info("WEED block accepted: %s", result.get("hash"))
+            native_stored = (
+                isinstance(self._manager, NativeJobManager)
+                and result
+                and result.get("status") in ("connected", "side-branch")
+            )
+            if result and (
+                result.get("status") == "connected" or native_stored
+            ):
+                logger.info("WEED block accepted/stored: %s", result.get("hash"))
                 landed = True
+                _stats_block()
             else:
-                logger.warning("WEED block rejected: %s", result)
+                logger.warning("WEED block rejected or not stored: %s", result)
 
         await self._send_result(req.id, True)
 
@@ -380,7 +540,7 @@ class StratumSession:
             with contextlib.suppress(Exception):
                 await self._on_block()
 
-    # ── helpers ────────────────────────────────────────────────────────
+    # Ã¢â€â‚¬Ã¢â€â‚¬ helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     async def _send_result(self, req_id: int | None, result: object) -> None:
         await self._write(StratumResponse(result=result, id=req_id).encode() + "\n")
@@ -389,7 +549,7 @@ class StratumSession:
         await self._write(StratumResponse(error=(code, message, None), id=req_id).encode() + "\n")
 
 
-# ── server ──────────────────────────────────────────────────────────────
+# Ã¢â€â‚¬Ã¢â€â‚¬ server Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 
 class StratumServer:
@@ -420,7 +580,7 @@ class StratumServer:
         self._stop = asyncio.Event()
         self._refresh_task: asyncio.Task | None = None
 
-    # ── public API ─────────────────────────────────────────────────────
+    # Ã¢â€â‚¬Ã¢â€â‚¬ public API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     @property
     def sessions(self) -> int:
@@ -456,7 +616,7 @@ class StratumServer:
         await self.start()
         await self._stop.wait()
 
-    # ── internals ──────────────────────────────────────────────────────
+    # Ã¢â€â‚¬Ã¢â€â‚¬ internals Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     async def _handle_connection(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -476,10 +636,11 @@ class StratumServer:
         try:
             await session.run()
         except Exception as exc:
-            logger.debug("session error from %s: %s", session.address, exc)
+            logger.exception("session error from %s: %s", session.address, exc)
 
     def _on_disconnect(self, session: StratumSession) -> None:
         self._sessions.discard(session)
+        _stats_disconnect(session)
         logger.info("miner disconnected from %s (total: %s)", session.address, len(self._sessions))
 
     async def refresh_job(self) -> None:
@@ -522,7 +683,7 @@ class StratumServer:
                 await asyncio.sleep(1.0)
 
 
-# ── entry point ─────────────────────────────────────────────────────────
+# Ã¢â€â‚¬Ã¢â€â‚¬ entry point Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 
 def create_server(
@@ -536,6 +697,7 @@ def create_server(
     client_timeout: float = DEFAULT_READ_TIMEOUT,
     share_difficulty: float | None = DEFAULT_SHARE_DIFFICULTY,
     chain_id: int = 0,
+    mode: str = "auxpow",
     parent: ParentChainClient | None = None,
     allow_pool_payout: bool = False,
 ) -> StratumServer:
@@ -547,14 +709,23 @@ def create_server(
     (1 = mainnet, 2 = testnet, 3 = regtest); 0 disables the check.
     """
     weed = RpcClient(weed_url, token=weed_token, timeout=30.0)
-    manager = JobManager(
-        bitcoin=parent if parent is not None else SimulatedParentChain(),
-        weed=weed,
-        payout_address=weed_address,
-        chain_id=chain_id,
-        share_difficulty=share_difficulty,
-        coinbase_builder=CoinbaseBuilder(),
-    )
+    if mode == "native":
+        manager = NativeJobManager(
+            weed=weed,
+            payout_address=weed_address,
+            share_difficulty=share_difficulty,
+        )
+    elif mode == "auxpow":
+        manager = JobManager(
+            bitcoin=parent if parent is not None else SimulatedParentChain(),
+            weed=weed,
+            payout_address=weed_address,
+            chain_id=chain_id,
+            share_difficulty=share_difficulty,
+            coinbase_builder=CoinbaseBuilder(),
+        )
+    else:
+        raise ValueError("mode must be auxpow or native")
     return StratumServer(
         allow_pool_payout=allow_pool_payout,
         host=host,
@@ -592,6 +763,7 @@ def _main() -> None:
         " --payout-address instead of rejecting them. Without this, such a"
         " miner is refused rather than silently mining for the pool.",
     )
+    parser.add_argument("--mode", choices=("auxpow", "native"), default="auxpow", help="Mining mode")
     parser.add_argument("--host", default="0.0.0.0", help="Stratum listen address")
     parser.add_argument("--port", type=int, default=3333, help="Stratum listen port")
     parser.add_argument("--job-interval", type=float, default=30.0, help="Seconds between new jobs")
@@ -618,7 +790,7 @@ def _main() -> None:
     )
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
 
     if args.allow_pool_payout and not args.payout_address:
         parser.error("--allow-pool-payout needs --payout-address to fall back to")
@@ -633,6 +805,7 @@ def _main() -> None:
         client_timeout=args.client_timeout,
         share_difficulty=args.share_difficulty,
         chain_id=args.chain_id,
+        mode=args.mode,
         allow_pool_payout=args.allow_pool_payout,
     )
     logger.info("WEED node: %s", args.weed_url)
@@ -653,3 +826,13 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+
+
+
+
+
+
+
+
+
+

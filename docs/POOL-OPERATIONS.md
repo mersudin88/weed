@@ -33,7 +33,7 @@ node's RPC token since `createauxblock`/`submitauxblock` are mining methods.
 
 ## Deployment on WEED public node (Alpine Linux)
 
-The reference node is an Alpine server at `45.126.126.139`.  The full node
+The reference node is an Alpine server at `REMOVED_OLD_SEED`.  The full node
 setup is documented in [RUNNING-A-NETWORK.md](RUNNING-A-NETWORK.md); this
 section adds the Stratum bridge on top of that existing installation.
 

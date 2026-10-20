@@ -67,7 +67,7 @@ class StratumResponse:
     id: int | None = None
 
     def encode(self) -> str:
-        payload: dict[str, Any] = {"id": self.id, "jsonrpc": "2.0"}
+        payload: dict[str, Any] = {"id": self.id}
         if self.error is not None:
             payload["error"] = {
                 "code": self.error[0],
@@ -79,9 +79,16 @@ class StratumResponse:
         return json.dumps(payload, separators=(",", ":"))
 
 
+def _json_default(value: Any) -> Any:
+    """Encode binary Stratum fields as hexadecimal strings."""
+    if isinstance(value, bytes):
+        return value.hex()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 def encode_message(obj: dict[str, Any]) -> str:
     """Encode a JSON-RPC notification or response as a Stratum line."""
-    return json.dumps(obj, separators=(",", ":")) + "\n"
+    return json.dumps(obj, separators=(",", ":"), default=_json_default) + "\n"
 
 
 async def read_message(reader: asyncio.StreamReader, timeout: float = DEFAULT_READ_TIMEOUT) -> str:
@@ -93,3 +100,4 @@ async def read_message(reader: asyncio.StreamReader, timeout: float = DEFAULT_RE
     if not line:
         raise StratumError("connection closed") from None
     return line.decode("utf-8").rstrip("\n").rstrip("\r")
+
