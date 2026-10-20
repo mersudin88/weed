@@ -11,26 +11,14 @@ retargeting, halvings, a hard supply cap — with faster blocks and a modern
 feature set (BIP-39/32/44 wallets, P2SH multisig, replace-by-fee, encrypted
 P2P links).
 
-**Version 2.7.6 · Mainnet is live and mined · MIT licensed**
+**WEED · Mainnet · MIT licensed**
 
-<div align="center">
+## Downloads
 
-[![Download for Windows (64-bit)](https://img.shields.io/badge/Download-Windows_64--bit-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-win64.zip)
-[![Windows installer](https://img.shields.io/badge/Windows_Installer-.exe-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-Setup-2.7.6.exe)
+Visit the [WEED releases page](https://github.com/mersudin88/weed/releases)
+for available downloads.
 
-[![Download for Ubuntu](https://img.shields.io/badge/Download-Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-linux-x86_64.tar.gz)
-[![Download for Fedora](https://img.shields.io/badge/Download-Fedora-51A2DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-linux-fc44-x86_64.tar.gz)
 
-[![Download for macOS (Apple Silicon)](https://img.shields.io/badge/Download-macOS_Apple_Silicon-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-macos-arm64.tar.gz)
-[![Download for macOS (Intel)](https://img.shields.io/badge/Download-macOS_Intel-555555?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/alessio-ds/WEED/releases/download/v2.7.6/WEED-2.7.6-macos-x86_64.tar.gz)
-
-**No Python. No dependencies. Download, extract, run.**
-
-Or use it straight from your browser, nothing to install:
-
-[![Open the WEED Web Wallet](https://img.shields.io/badge/Open-Web_Wallet-e33a4e?style=for-the-badge&logo=github&logoColor=white)](https://alessio-ds.github.io/weed-web-wallet/)
-
-</div>
 
 ```
 ┌────────────────┐   getblocktemplate / submitblock   ┌───────────────┐
