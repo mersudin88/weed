@@ -152,30 +152,11 @@ the miners that are active *now*, not the ones who left.
 | `weed-node` | full node: validates everything from genesis, serves RPC + explorer |
 | `weed-wallet` | BIP-39/32/44 HD wallet; signs locally, keys never leave the machine |
 | `weed-miner` | CPU miner across multiple cores; pure-Python SHA-256d (~1 MH/s/core) |
-| GUI apps | Qt desktop wallet and miner, ready-to-run releases for Windows & Linux |
+| GUI apps | Qt desktop wallet and miner; install the GUI dependencies from source |
 
 ---
 
 ## Install
-
-### Compiled releases (no Python needed)
-
-Use the big buttons at the top of this page. Each archive is a
-self-contained build made with PyInstaller — no Python, no dependencies, no
-installation. What's inside:
-
-| File | What it is |
-|---|---|
-| `weed-wallet-gui` | the desktop wallet |
-| `weed-miner-gui` | the desktop miner |
-| `weed-node` | the node, started in the background by the other two |
-
-Extract the archive anywhere and double-click the wallet or the miner. If no
-node is running yet, the first window to open starts a local node in the
-background (same network and datadir) and stops it again when the last window
-closes. On Linux and macOS, `chmod +x weed-*` after extracting. The Windows
-installer `.exe` installs per user (no admin rights) and adds Start-menu
-shortcuts for both applications.
 
 ### From source
 
