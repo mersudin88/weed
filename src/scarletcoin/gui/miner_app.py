@@ -26,6 +26,7 @@ from scarletcoin.gui.common import (  # noqa: E402
     start_node_with_progress,
 )
 from scarletcoin.miner.miner import Miner  # noqa: E402
+from scarletcoin.miner.pool_miner import PoolMiner  # noqa: E402
 from scarletcoin.net.client import RpcClient, RpcClientError  # noqa: E402
 from scarletcoin.net.launcher import LocalNode  # noqa: E402
 from scarletcoin.units import format_amount  # noqa: E402
@@ -80,6 +81,37 @@ class MinerBridge(QtCore.QObject):
         self._miner.stop()
 
 
+class PoolMinerBridge(QtCore.QObject):
+    """Run the Stratum pool miner in the GUI worker thread."""
+
+    miner_event = QtCore.pyqtSignal(str, object)
+    stopped = QtCore.pyqtSignal()
+
+    def __init__(self, pool_url: str, address: str, workers: int = 1) -> None:
+        super().__init__()
+        self._miner = PoolMiner(
+            pool_url,
+            address,
+            workers=workers,
+            on_event=lambda kind, **payload:
+                self.miner_event.emit(kind, payload),
+        )
+
+    @property
+    def stats(self):
+        return self._miner
+
+    @QtCore.pyqtSlot()
+    def run(self) -> None:
+        try:
+            self._miner.run()
+        finally:
+            self.stopped.emit()
+
+    def stop(self) -> None:
+        self._miner.stop()
+
+
 class MinerWindow(QtWidgets.QMainWindow):
     """The miner window: pick an address, press start, watch the hash rate."""
 
@@ -125,6 +157,17 @@ class MinerWindow(QtWidgets.QMainWindow):
         layout.addWidget(title)
 
         form = QtWidgets.QFormLayout()
+        self.mode_box = QtWidgets.QComboBox()
+        self.mode_box.addItems(["Pool", "Solo"])
+        form.addRow("Mining mode", self.mode_box)
+
+        self.pool_url_edit = QtWidgets.QLineEdit(
+            "stratum+tcp://bosniapool.duckdns.org:3333"
+        )
+        self.pool_url_edit.setPlaceholderText("Stratum pool URL")
+        self.pool_url_edit.setFont(monospace())
+        form.addRow("Pool URL", self.pool_url_edit)
+
         self.address_edit = QtWidgets.QLineEdit(address)
         self.address_edit.setPlaceholderText("address the block rewards are paid to")
         self.address_edit.setFont(monospace())
@@ -254,6 +297,27 @@ class MinerWindow(QtWidgets.QMainWindow):
         if not address:
             show_error(self, "Miner", "Enter the address the rewards should be paid to.")
             return
+        if self.mode_box.currentText() == "Pool":
+            pool_url = self.pool_url_edit.text().strip()
+            if not pool_url:
+                show_error(self, "Miner", "Enter the Stratum pool URL.")
+                return
+            self._bridge = PoolMinerBridge(pool_url, address, self.workers_box.value())
+            self._thread = QtCore.QThread(self)
+            self._bridge.moveToThread(self._thread)
+            self._thread.started.connect(self._bridge.run)
+            self._bridge.miner_event.connect(self._on_event)
+            self._bridge.stopped.connect(self._on_stopped)
+            self._thread.start()
+
+            self.address_edit.setEnabled(False)
+            self.pool_url_edit.setEnabled(False)
+            self.mode_box.setEnabled(False)
+            self.workers_box.setEnabled(False)
+            self.start_button.setText("Stop mining")
+            self._log(f"connecting to pool {pool_url} for {address}")
+            return
+
         try:
             self.client.getinfo()
         except RpcClientError as exc:
@@ -284,6 +348,8 @@ class MinerWindow(QtWidgets.QMainWindow):
         self._thread.start()
 
         self.address_edit.setEnabled(False)
+        self.pool_url_edit.setEnabled(False)
+        self.mode_box.setEnabled(False)
         self.workers_box.setEnabled(False)
         self.start_button.setText("Stop mining")
         self._log(f"mining to {address} with {self.workers_box.value()} worker(s)")
@@ -302,6 +368,8 @@ class MinerWindow(QtWidgets.QMainWindow):
         self._bridge = None
         self._thread = None
         self.address_edit.setEnabled(True)
+        self.pool_url_edit.setEnabled(True)
+        self.mode_box.setEnabled(True)
         self.workers_box.setEnabled(True)
         self.start_button.setEnabled(True)
         self.start_button.setText("Start mining")
@@ -311,26 +379,57 @@ class MinerWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(str, object)
     def _on_event(self, kind: str, payload: dict) -> None:
-        if kind == "accepted":
-            self._log(f"mined block {payload['hash']} at height {payload['height']}")
-            self._refresh_node()
+        if kind == "status":
+            self._log(payload.get("message", "Pool status changed"))
+        elif kind == "difficulty":
+            self._log(f"pool share difficulty: {payload['difficulty']:g}")
+        elif kind == "job":
+            self._log(f"received pool job {payload['job_id']}")
+        elif kind == "accepted":
+            if self.mode_box.currentText() == "Pool":
+                self._log(
+                    f"pool accepted share; total accepted: {payload.get('accepted', 0)}"
+                )
+            else:
+                self._log(
+                    f"mined block {payload['hash']} at height {payload['height']}"
+                )
+                self._refresh_node()
         elif kind == "rejected":
-            self._log(f"block rejected: {payload['reason']}")
+            if self.mode_box.currentText() == "Pool":
+                self._log(
+                    f"pool rejected share: {payload.get('error') or 'share rejected'}"
+                )
+            else:
+                self._log(f"block rejected: {payload['reason']}")
         elif kind == "error":
             self._log(f"error: {payload['message']}")
         elif kind == "template":
-            self._log(f"new work for height {payload['height']} (bits {payload['bits']})")
+            self._log(
+                f"new work for height {payload['height']} (bits {payload['bits']})"
+            )
+        elif kind == "rate":
+            pass
 
     def _tick(self) -> None:
         if self._bridge is None:
             return
         stats = self._bridge.stats
         self.rate_label.setText(format_rate(stats.last_rate))
-        self.detail_label.setText(
-            f"average {format_rate(stats.average_rate)}  ·  "
-            f"{stats.hashes:,} hashes  ·  {stats.blocks_accepted} blocks mined"
-            f"  ·  height {stats.height}"
-        )
+        if self.mode_box.currentText() == "Pool":
+            self.detail_label.setText(
+                f"average {format_rate(stats.average_rate)}  ·  "
+                f"{stats.hashes:,} hashes  ·  "
+                f"{stats.accepted} accepted shares  ·  "
+                f"{stats.rejected} rejected shares"
+            )
+        else:
+            self.detail_label.setText(
+                f"average {format_rate(stats.average_rate)}  ·  "
+                f"{stats.hashes:,} hashes  ·  "
+                f"{stats.blocks_accepted} blocks mined"
+                f"  ·  height {stats.height}"
+            )
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         """Stop mining, and any node this window started, before closing."""
@@ -382,17 +481,16 @@ def main(argv: list[str] | None = None) -> int:
     application.setApplicationName(f"WEED miner {__version__}")
 
     address = args.address or _wallet_address(args.datadir, args.network)
-    settings, local_node = resolve_startup(args, for_mining=True)
-    if settings is None:
-        return 1
-
+    # Pool mode is the default and must work without a local node.
+    # Solo mode can use the node controls in the Node menu.
+    settings = ConnectionSettings("http://127.0.0.1:28332", "")
     window = MinerWindow(
         settings.client(),
         args.network,
         address,
         datadir=args.datadir,
         settings=settings,
-        local_node=local_node,
+        local_node=None,
     )
     window.show()
     return application.exec_()
