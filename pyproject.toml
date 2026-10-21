@@ -27,6 +27,7 @@ gui = ["PyQt5>=5.15"]
 [project.scripts]
 weed-node = "scarletcoin.net.cli:main"
 weed-wallet = "scarletcoin.wallet.cli:main"
+weed-wallet-web = "scarletcoin.wallet.web:main"
 weed-miner = "scarletcoin.miner.cli:main"
 weed-wallet-gui = "scarletcoin.gui.wallet_app:main"
 weed-miner-gui = "scarletcoin.gui.miner_app:main"

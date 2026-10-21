@@ -37,18 +37,44 @@ MAX_INPUT_ROWS = 25
 #: a split transaction can have thousands, and a page should not grow with it.
 MAX_OUTPUT_ROWS = 200
 
+_LEAF_PATTERN = (
+    "data:image/svg+xml,"
+    "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E"
+    "%3Cpath d='M90 158C85 139 84 123 85 108C69 121 55 122 43 117"
+    "C52 108 64 99 78 94C58 102 41 99 28 90C41 83 56 78 74 79"
+    "C55 78 39 67 31 53C47 51 63 54 78 64C63 53 58 37 63 22"
+    "C77 30 86 43 90 61C94 43 103 30 117 22C122 37 117 53 102 64"
+    "C117 54 133 51 149 53C141 67 125 78 106 79C124 78 139 83 152 90"
+    "C139 99 122 102 102 94C116 99 128 108 137 117"
+    "C125 122 111 121 95 108C96 123 95 139 90 158Z' fill='%2358d66b'"
+    " fill-opacity='.58' stroke='%2358d66b' stroke-width='2'"
+    " stroke-linejoin='round'/%3E"
+    "%3Cpath d='M90 157V82M90 112L50 61M90 112L130 61"
+    "M90 100L70 39M90 100L110 39' fill='none' stroke='%230b120d'"
+    " stroke-opacity='.8' stroke-width='2'/%3E"
+    "%3Cpath d='M75 89Q79 94 83 89M97 89Q101 94 105 89"
+    "M78 101Q90 114 102 101' fill='none' stroke='%230b120d'"
+    " stroke-width='2.8' stroke-linecap='round'/%3E%3C/svg%3E"
+)
+
 _STYLE = """
 :root {
-  --bg: #12100f; --panel: #1b1817; --line: #2e2825; --text: #e8e2df;
-  --muted: #97877f; --accent: #e33a4e; --accent-soft: #f0a0a8; --good: #6fc98b;
+  --bg: #0b120d; --panel: #142019; --line: #2a4131; --text: #e5f0e7;
+  --muted: #91a895; --accent: #58d66b; --accent-soft: #a3f0ad; --good: #7ee08b;
 }
 * { box-sizing: border-box; }
 body {
-  margin: 0; background: var(--bg); color: var(--text);
+  position: relative; margin: 0; background: var(--bg); color: var(--text);
   font: 15px/1.55 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.16;
+  background-image: url("__LEAF_PATTERN__");
+  background-size: 220px 220px; background-repeat: repeat;
 }
 a { color: var(--accent-soft); text-decoration: none; }
 a:hover { text-decoration: underline; }
+header, main, footer { position: relative; z-index: 1; }
 header {
   border-bottom: 1px solid var(--line); padding: 18px 24px; display: flex;
   gap: 24px; align-items: center; flex-wrap: wrap;
@@ -66,7 +92,7 @@ input[type=text] {
   padding: 7px 10px; border-radius: 6px; min-width: 320px; font: inherit;
 }
 button {
-  background: var(--accent); border: 0; color: #fff; padding: 7px 14px;
+  background: var(--accent); border: 0; color: #0b120d; padding: 7px 14px;
   border-radius: 6px; cursor: pointer; font: inherit;
 }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
@@ -91,8 +117,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .tag.warn { color: var(--accent); border-color: var(--accent); }
 .amount { color: var(--good); }
 footer { color: var(--muted); font-size: 12px; padding: 24px; text-align: center; }
+.powered-by { color: #39ff14; font-weight: 700; }
 .empty { color: var(--muted); padding: 12px 0; }
-"""
+""".replace("__LEAF_PATTERN__", _LEAF_PATTERN)
 
 
 class NotFound(Exception):
@@ -101,7 +128,6 @@ class NotFound(Exception):
 
 def _page(server: RpcServer, title: str, body: str) -> str:
     node = server.node
-    network = escape(node.params.name)
     live_script = _live_reload_script(node)
     return f"""<!doctype html>
 <html lang="en">
@@ -123,7 +149,7 @@ def _page(server: RpcServer, title: str, body: str) -> str:
     <a href="/mempool">Mempool</a>
     <a href="/peers">Peers</a>
     <a href="/rich">Rich list</a>
-    <a href="https://alessio-ds.github.io/weed-web-wallet/">Web wallet</a>
+    <a href="http://127.0.0.1:28444/" target="_blank" rel="noopener">Web Wallet</a>
   </nav>
   <form action="/search" method="get">
     <input type="text" name="q" placeholder="block height, hash, txid or address" required>
@@ -132,8 +158,7 @@ def _page(server: RpcServer, title: str, body: str) -> str:
 </header>
 <main>{body}</main>
 <footer>
-  WEED node on the {network} network &mdash; block explorer served by the node itself<br>
-  <a href="https://github.com/alessio-ds/WEED">github.com/alessio-ds/WEED</a>
+  <span class="powered-by">Powered by Ramo</span>
 </footer>
 </body>
 </html>
@@ -169,9 +194,9 @@ def _live_reload_script(node) -> str:
 #: The explorer's favicon, shared with the browser wallet.
 FAVICON_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
-    '<rect width="64" height="64" rx="14" fill="#12100f"/>'
-    '<circle cx="32" cy="32" r="22" fill="none" stroke="#e33a4e" stroke-width="6"/>'
-    '<path d="M32 14 L46 56 L32 44 L18 56 Z" fill="#e33a4e"/>'
+    '<rect width="64" height="64" rx="14" fill="#0b120d"/>'
+    '<circle cx="32" cy="32" r="22" fill="none" stroke="#58d66b" stroke-width="6"/>'
+    '<path d="M32 14 L46 56 L32 44 L18 56 Z" fill="#58d66b"/>'
     "</svg>"
 )
 
@@ -477,8 +502,8 @@ def _hashrate_chart(history: list[dict]) -> str:
         yy = pad_t + inner_h - (math.log10(tick) - lo) / (hi - lo) * inner_h
         grid += (
             f'<line x1="{pad_l}" y1="{yy:.1f}" x2="{width - pad_r}" y2="{yy:.1f}" '
-            f'stroke="#2e2825" stroke-width="1"/>'
-            f'<text x="{pad_l - 6}" y="{yy + 4:.1f}" fill="#97877f" font-size="11" '
+            f'stroke="#2a4131" stroke-width="1"/>'
+            f'<text x="{pad_l - 6}" y="{yy + 4:.1f}" fill="#91a895" font-size="11" '
             f'text-anchor="end">{_hash_rate(tick)}</text>'
         )
 
@@ -493,13 +518,13 @@ def _hashrate_chart(history: list[dict]) -> str:
 
     return (
         f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="Hash rate history" '
-        f'style="width:100%;height:auto;background:#1b1817;border:1px solid #2e2825;'
+        f'style="width:100%;height:auto;background:#142019;border:1px solid #2a4131;'
         f'border-radius:8px;">'
         f"{grid}"
-        f'<polygon points="{area}" fill="#e33a4e" opacity="0.12"/>'
-        f'<polyline points="{line_points}" fill="none" stroke="#e33a4e" stroke-width="2"/>'
-        f'<text x="{pad_l}" y="{height - 6:.1f}" fill="#97877f" font-size="11">{start}</text>'
-        f'<text x="{width - pad_r:.1f}" y="{height - 6:.1f}" fill="#97877f" font-size="11" '
+        f'<polygon points="{area}" fill="#58d66b" opacity="0.12"/>'
+        f'<polyline points="{line_points}" fill="none" stroke="#58d66b" stroke-width="2"/>'
+        f'<text x="{pad_l}" y="{height - 6:.1f}" fill="#91a895" font-size="11">{start}</text>'
+        f'<text x="{width - pad_r:.1f}" y="{height - 6:.1f}" fill="#91a895" font-size="11" '
         f'text-anchor="end">{end}</text>'
         f"</svg>"
     )

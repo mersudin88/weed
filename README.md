@@ -151,6 +151,7 @@ the miners that are active *now*, not the ones who left.
 |---|---|
 | `weed-node` | full node: validates everything from genesis, serves RPC + explorer |
 | `weed-wallet` | BIP-39/32/44 HD wallet; signs locally, keys never leave the machine |
+| `weed-wallet-web` | local-only browser interface for an encrypted wallet |
 | `weed-miner` | CPU miner across multiple cores; pure-Python SHA-256d (~1 MH/s/core) |
 | GUI apps | Qt desktop wallet and miner; install the GUI dependencies from source |
 
@@ -192,10 +193,24 @@ uv run weed-wallet --network mainnet send WEEDYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY 1
 uv run weed-wallet --network mainnet history
 ```
 
-Open <http://127.0.0.1:28332> for the explorer. Want a private playground
-instead? `regtest` gives you your own local chain with trivial proof of work —
+Open the explorer at <http://127.0.0.1:28332> and click **Web Wallet**. This
+starts the local browser wallet automatically; stopping the node also stops it.
+To start the wallet manually instead:
+
+```sh
+uv run --no-sync python -m scarletcoin.wallet.web --network mainnet
+```
+
+Want a private playground instead? `regtest` gives you your own local chain with trivial proof of work —
 same commands with `--network regtest`, and `weed-node rpc --network regtest
 generate 5` mines instantly.
+
+The browser wallet listens only on `127.0.0.1` and uses the encrypted wallet
+file for the selected network. It automatically locks after ten minutes without
+activity. Choose **Create another wallet** to make a separately encrypted
+`wallet-<name>.json` without replacing the current file; use **Choose wallet**
+to switch between saved wallets. Recovery phrases are shown only when a wallet
+is created and must be kept offline.
 
 ### Networks
 

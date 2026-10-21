@@ -5,22 +5,27 @@ One HTTP server serves both:
 * ``POST /`` or ``POST /rpc`` — JSON-RPC 2.0, used by the wallet, the miner and
   the command line tools.  If a token is configured, requests must carry an
   ``Authorization: Bearer <token>`` header.
-* ``GET /...`` — a small read-only HTML explorer, plus ``GET /api/info`` for
-  monitoring.
+* ``GET /...`` — a small HTML explorer, plus ``GET /api/info`` for monitoring.
+  Opening ``/wallet`` locally also starts the loopback-only browser wallet.
 """
 
 from __future__ import annotations
 
 import hmac
 import inspect
+import ipaddress
 import json
 import logging
+import subprocess
+import sys
 import threading
 import time
 from collections.abc import Callable
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.error import URLError
+from urllib.parse import parse_qs, unquote, urlparse, urlsplit
+from urllib.request import urlopen
 
 from scarletcoin import __version__
 from scarletcoin.core.block import Block
@@ -37,6 +42,8 @@ from scarletcoin.units import format_bytes
 __all__ = ["MINING_METHODS", "PUBLIC_METHODS", "RpcError", "RpcServer", "build_methods"]
 
 logger = logging.getLogger(__name__)
+WALLET_WEB_PORT = 28444
+WALLET_WEB_URL = f"http://127.0.0.1:{WALLET_WEB_PORT}/"
 
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600
@@ -669,6 +676,8 @@ class RpcServer:
         self._server = ThreadingHTTPServer((host, port), self._make_handler())
         self._server.daemon_threads = True
         self._thread: threading.Thread | None = None
+        self._wallet_start_lock = threading.Lock()
+        self._wallet_process: subprocess.Popen | None = None
 
     @property
     def port(self) -> int:
@@ -706,6 +715,14 @@ class RpcServer:
             self._thread.join(timeout=5.0)
             self._thread = None
         self._server.server_close()
+        if self._wallet_process is not None and self._wallet_process.poll() is None:
+            self._wallet_process.terminate()
+            try:
+                self._wallet_process.wait(timeout=3.0)
+            except subprocess.TimeoutExpired:
+                self._wallet_process.kill()
+                self._wallet_process.wait(timeout=3.0)
+        self._wallet_process = None
 
     def __enter__(self) -> RpcServer:
         self.start()
@@ -731,6 +748,61 @@ class RpcServer:
         if method in PUBLIC_METHODS:
             return True
         return self.public_mining and method in MINING_METHODS
+
+    def _ensure_wallet_web(self) -> None:
+        """Start the local wallet if needed and wait until its UI is ready."""
+        with self._wallet_start_lock:
+            try:
+                with urlopen(WALLET_WEB_URL + "api/status", timeout=0.5) as response:
+                    status = json.load(response)
+                if status.get("network") != self.node.params.name:
+                    raise RuntimeError(
+                        "the browser wallet is already running for a different network; "
+                        "close it before opening this one"
+                    )
+                return
+            except URLError:
+                pass
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                logger.warning("could not check the local browser wallet: %s", exc)
+
+            if self._wallet_process is None or self._wallet_process.poll() is not None:
+                self._wallet_process = subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-m",
+                        "scarletcoin.wallet.web",
+                        "--network",
+                        self.node.params.name,
+                        "--datadir",
+                        str(self.node.config.datadir),
+                        "--rpc-url",
+                        self.url,
+                        "--no-browser",
+                    ],
+                    stdin=subprocess.DEVNULL,
+                )
+
+            for _ in range(50):
+                if self._wallet_process.poll() is not None:
+                    raise RuntimeError(
+                        "the browser wallet stopped before it was ready; "
+                        "check the node terminal for its error"
+                    )
+                try:
+                    with urlopen(WALLET_WEB_URL + "api/status", timeout=0.5) as response:
+                        status = json.load(response)
+                    if status.get("network") != self.node.params.name:
+                        raise RuntimeError(
+                            "the browser wallet started for a different network"
+                        )
+                    return
+                except URLError:
+                    time.sleep(0.1)
+                except (OSError, ValueError, json.JSONDecodeError) as exc:
+                    logger.warning("could not read local browser wallet status: %s", exc)
+                    time.sleep(0.1)
+            raise RuntimeError("the browser wallet did not become ready within five seconds")
 
     def _dispatch(self, method: str, params: object) -> object:
         handler = self.methods.get(method)
@@ -847,6 +919,29 @@ class RpcServer:
             def _html(self, markup: str, status: HTTPStatus = HTTPStatus.OK) -> None:
                 self._respond(status, markup.encode("utf-8"), "text/html; charset=utf-8")
 
+            def _is_local_browser_request(self) -> bool:
+                try:
+                    remote = ipaddress.ip_address(self.client_address[0])
+                    host = urlsplit(f"//{self.headers.get('Host', '')}")
+                    hostname = host.hostname or ""
+                    host_is_local = hostname == "localhost"
+                    if not host_is_local:
+                        host_is_local = ipaddress.ip_address(hostname).is_loopback
+                    return (
+                        remote.is_loopback
+                        and host_is_local
+                        and host.port == server.port
+                    )
+                except ValueError:
+                    return False
+
+            def _redirect(self, location: str) -> None:
+                self.send_response(HTTPStatus.SEE_OTHER)
+                self.send_header("Location", location)
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
             def do_POST(self) -> None:
                 url = urlparse(self.path)
                 if url.path not in ("/", "/rpc"):
@@ -873,6 +968,21 @@ class RpcServer:
                 try:
                     if path == "/api/info":
                         self._json(server.node.info())
+                        return
+                    if path == "/wallet":
+                        if not self._is_local_browser_request():
+                            self._json(
+                                {"error": "the browser wallet can only be opened locally"},
+                                HTTPStatus.FORBIDDEN,
+                            )
+                            return
+                        try:
+                            server._ensure_wallet_web()
+                        except (OSError, RuntimeError) as exc:
+                            logger.warning("could not start the local browser wallet: %s", exc)
+                            self._json({"error": str(exc)}, HTTPStatus.SERVICE_UNAVAILABLE)
+                            return
+                        self._redirect(WALLET_WEB_URL)
                         return
                     if path in ("/icon.svg", "/favicon.ico"):
                         self._respond(
