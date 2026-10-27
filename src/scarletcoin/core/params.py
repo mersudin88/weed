@@ -234,7 +234,7 @@ MAINNET = ChainParams(
     # can be useful before it has a chain of its own. Whichever of these answers
     # first is asked for the others, so this list only has to get a client
     # started, not stay complete.
-    public_nodes=(),
+    public_nodes=("https://bosniapool.duckdns.org",),
     auxpow_chain_id=1,
     # Activated at a fixed height so every operator has a definite cutover
     # point.  Before this height an AuxPoW block is rejected outright; after
